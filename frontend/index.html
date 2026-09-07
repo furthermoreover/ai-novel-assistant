@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<title>AI 小说创作助手</title>
+<style>
+:root {
+  --bg: #0f1117; --card: #1a1d27; --card2: #222634; --border: #2c3040;
+  --text: #e8eaf0; --muted: #8b91a3; --primary: #6366f1; --primary2: #8b5cf6;
+  --success: #22c55e; --warn: #f59e0b; --danger: #ef4444;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:"Microsoft YaHei","PingFang SC",sans-serif; min-height:100vh; }
+a { color:inherit; text-decoration:none; }
+button { cursor:pointer; border:none; background:none; color:inherit; font:inherit; }
+input, textarea, select { background:var(--card2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 12px; font:inherit; outline:none; }
+input:focus, textarea:focus, select:focus { border-color:var(--primary); }
+textarea { resize:vertical; line-height:1.6; }
+
+/* 顶部导航 */
+.navbar { display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:50; }
+.nav-brand { display:flex; align-items:center; gap:10px; font-size:18px; font-weight:700; }
+.nav-brand .logo { width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,var(--primary),var(--primary2)); display:flex; align-items:center; justify-content:center; font-size:18px; }
+.nav-links { display:flex; gap:6px; }
+.nav-link { padding:8px 16px; border-radius:8px; font-size:14px; color:var(--muted); transition:.2s; }
+.nav-link:hover { color:var(--text); background:var(--card2); }
+.nav-link.active { color:#fff; background:var(--primary); }
+
+/* 页面容器 */
+.page { max-width:1200px; margin:0 auto; padding:24px; display:none; }
+.page.active { display:block; }
+
+/* 卡片 */
+.card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px; margin-bottom:16px; }
+.card-title { font-size:16px; font-weight:600; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.card-title .icon { font-size:18px; }
+
+/* 按钮 */
+.btn { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:9px; font-size:14px; font-weight:500; transition:.2s; border:1px solid transparent; }
+.btn-primary { background:var(--primary); color:#fff; }
+.btn-primary:hover { background:#4f52e0; }
+.btn-outline { background:transparent; border-color:var(--border); color:var(--text); }
+.btn-outline:hover { border-color:var(--primary); color:#a5b4fc; }
+.btn-danger { background:transparent; border-color:var(--danger); color:var(--danger); }
+.btn-danger:hover { background:var(--danger); color:#fff; }
+.btn-sm { padding:5px 12px; font-size:13px; }
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+
+/* 表单 */
+.form-row { display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+.form-row > * { flex:1; min-width:180px; }
+label { font-size:13px; color:var(--muted); display:block; margin-bottom:6px; }
+
+/* 列表 */
+.list-item { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; transition:.2s; }
+.list-item:hover { border-color:var(--primary); }
+.item-main { flex:1; min-width:0; }
+.item-title { font-size:15px; font-weight:600; margin-bottom:4px; }
+.item-sub { font-size:13px; color:var(--muted); }
+.item-actions { display:flex; gap:8px; flex-shrink:0; }
+
+/* 标签页 */
+.tabs { display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:20px; flex-wrap:wrap; }
+.tab { padding:10px 20px; font-size:14px; color:var(--muted); border-bottom:2px solid transparent; transition:.2s; }
+.tab:hover { color:var(--text); }
+.tab.active { color:#a5b4fc; border-bottom-color:var(--primary); }
+
+/* 网格 */
+.grid { display:grid; gap:16px; }
+.grid-2 { grid-template-columns:1fr 1fr; }
+.grid-3 { grid-template-columns:repeat(3,1fr); }
+@media (max-width:900px){ .grid-2,.grid-3{ grid-template-columns:1fr; } }
+
+/* 徽章 */
+.badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:12px; background:var(--card2); border:1px solid var(--border); color:var(--muted); }
+.badge-primary { background:rgba(99,102,241,.15); border-color:rgba(99,102,241,.4); color:#a5b4fc; }
+.badge-success { background:rgba(34,197,94,.12); border-color:rgba(34,197,94,.35); color:#4ade80; }
+
+/* 技能卡 */
+.skill-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; transition:.2s; cursor:pointer; }
+.skill-card:hover { border-color:var(--primary); transform:translateY(-2px); }
+.skill-icon { font-size:28px; margin-bottom:10px; }
+.skill-name { font-size:15px; font-weight:600; margin-bottom:6px; }
+.skill-desc { font-size:13px; color:var(--muted); line-height:1.6; }
+.skill-tags { margin-top:10px; display:flex; gap:6px; flex-wrap:wrap; }
+
+/* 知识块 */
+.kb-item { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:10px; }
+.kb-item h4 { font-size:14px; margin-bottom:8px; color:#a5b4fc; }
+.kb-item p { font-size:13px; color:var(--muted); line-height:1.7; white-space:pre-wrap; max-height:120px; overflow:hidden; }
+.kb-item.expanded p { max-height:none; }
+.kb-meta { margin-top:8px; font-size:12px; color:#5b6172; }
+
+/* 写作区（上下布局） */
+.write-layout { display:grid; grid-template-columns:1fr; gap:16px; }
+.write-input, .write-output { min-height:200px; }
+.write-output { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:16px; font-size:14px; line-height:1.9; white-space:pre-wrap; overflow-y:auto; max-height:480px; }
+
+/* 下一章规划卡片 */
+.plan-card { margin-top:14px; border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--card); }
+.plan-card-head { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:linear-gradient(135deg,rgba(99,102,241,.18),rgba(139,92,246,.10)); border-bottom:1px solid var(--border); }
+.plan-card-title { font-size:15px; font-weight:600; color:#a5b4fc; display:flex; align-items:center; gap:8px; }
+.plan-card-title::before { content:'🧭'; }
+.plan-card-body { padding:16px 18px; font-size:14px; line-height:2; white-space:pre-wrap; color:var(--text); background:var(--card2); max-height:440px; overflow-y:auto; }
+.plan-btn { font-size:12px; padding:6px 12px; }
+
+/* 工具条 */
+.toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+.toolbar .spacer { flex:1; }
+
+/* 弹窗 */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:100; }
+.modal-overlay.show { display:flex; }
+.nav-auth { display:flex; gap:8px; align-items:center; }
+.nav-auth .user-chip { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); }
+.auth-tabs { display:flex; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:3px; margin-bottom:14px; }
+.auth-tab { flex:1; padding:8px 0; border:none; background:transparent; color:var(--muted); cursor:pointer; font-size:14px; border-radius:6px; transition:.2s; }
+.auth-tab.active { background:var(--primary); color:#fff; }
+.auth-tip { font-size:12px; color:var(--muted); margin:8px 0 0; line-height:1.7; }
+.modal { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; width:90%; max-width:560px; max-height:85vh; overflow-y:auto; }
+.modal h3 { margin-bottom:16px; font-size:17px; }
+.modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+
+/* 提示 */
+.toast { position:fixed; top:20px; right:20px; z-index:200; display:flex; flex-direction:column; gap:8px; }
+.toast-item { background:var(--card); border:1px solid var(--border); border-left:4px solid var(--primary); padding:12px 18px; border-radius:10px; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,.4); animation:slideIn .3s; }
+.toast-item.success { border-left-color:var(--success); }
+.toast-item.error { border-left-color:var(--danger); }
+@keyframes slideIn { from{ transform:translateX(100%); opacity:0; } to{ transform:none; opacity:1; } }
+
+/* 加载 */
+.loading { text-align:center; padding:40px; color:var(--muted); }
+.spinner { width:28px; height:28px; border:3px solid var(--border); border-top-color:var(--primary); border-radius:50%; display:inline-block; animation:spin 1s linear infinite; margin-bottom:10px; }
+@keyframes spin { to{ transform:rotate(360deg); } }
+
+/* 空状态 */
+.empty { text-align:center; padding:60px 20px; color:var(--muted); }
+.empty .icon { font-size:48px; margin-bottom:12px; }
+
+h2.page-title { font-size:22px; font-weight:700; margin-bottom:6px; }
+p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
+
+.mode-switch { display:flex; gap:6px; background:var(--card2); padding:4px; border-radius:10px; }
+.mode-btn { padding:7px 14px; border-radius:8px; font-size:13px; color:var(--muted); transition:.2s; }
+.mode-btn.active { background:var(--primary); color:#fff; }
+
+.section-label { font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin:20px 0 10px; }
+
+/* 同步进度条 */
+.progress-wrap { margin-top:14px; padding:14px 16px; background:var(--card2); border:1px solid var(--border); border-radius:10px; display:none; }
+.progress-wrap.show { display:block; }
+.progress-head { display:flex; align-items:center; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:8px; }
+.progress-bar { height:8px; background:var(--card); border-radius:6px; overflow:hidden; }
+.progress-fill { height:100%; width:0; background:linear-gradient(90deg,var(--primary),var(--primary2)); border-radius:6px; transition:width .4s ease; }
+.progress-text { font-size:12px; color:var(--muted); margin-top:8px; line-height:1.6; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="logo">📖</div>
+    <span>AI 小说创作助手</span>
+  </div>
+  <div class="nav-links">
+    <a class="nav-link active" data-page="projects" href="#projects">我的小说</a>
+    <a class="nav-link" data-page="skills" href="#skills">写作技能</a>
+    <a class="nav-link" data-page="knowledge" href="#knowledge">知识库</a>
+  </div>
+  <div class="nav-auth" id="nav-auth"></div>
+</nav>
+
+<!-- 项目列表页 -->
+<div class="page active" id="page-projects">
+  <h2 class="page-title">我的小说</h2>
+  <p class="page-sub">管理你的小说项目、大纲、人物与章节，AI 会记住所有设定，保持剧情连贯。</p>
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="openCreateProject()">＋ 新建小说</button>
+    <div class="spacer"></div>
+    <button class="btn btn-outline btn-sm" onclick="importKnowledge(false)">📥 导入知识库</button>
+    <button class="btn btn-outline btn-sm" onclick="importKnowledge(true)">🔄 重新导入</button>
+  </div>
+  <div id="project-list"></div>
+</div>
+
+<!-- 项目工作台 -->
+<div class="page" id="page-workspace">
+  <div class="toolbar">
+    <button class="btn btn-outline btn-sm" onclick="goProjects()">← 返回</button>
+    <div class="spacer"></div>
+    <span id="ws-project-info" style="font-size:14px;color:var(--muted)"></span>
+  </div>
+  <div class="tabs" id="ws-tabs">
+    <button class="tab active" data-tab="characters">人物</button>
+    <button class="tab" data-tab="chapters">章节</button>
+    <button class="tab" data-tab="writing">AI 写作</button>
+    <button class="tab" data-tab="agent">Agent 助手</button>
+  </div>
+
+  <!-- 人物 -->
+  <div class="tab-panel" id="panel-characters" style="display:none">
+    <div class="toolbar">
+      <button class="btn btn-primary btn-sm" onclick="openCharacterModal()">＋ 添加人物</button>
+    </div>
+    <div id="character-list"></div>
+  </div>
+
+  <!-- 章节 -->
+  <div class="tab-panel" id="panel-chapters" style="display:none">
+    <div class="toolbar">
+      <button class="btn btn-primary btn-sm" onclick="openChapterModal()">＋ 新建章节</button>
+      <button class="btn btn-outline btn-sm" onclick="openImportModal()">📥 导入已有小说</button>
+    </div>
+    <div id="chapter-list"></div>
+  </div>
+
+  <!-- AI 写作 -->
+  <div class="tab-panel" id="panel-writing" style="display:none">
+    <div class="toolbar">
+      <select id="write-skill" style="max-width:220px" onchange=""></select>
+      <select id="write-topic" style="max-width:200px">
+        <option value="auto">参考主题：自动</option>
+      </select>
+      <div class="mode-switch">
+        <button class="mode-btn active" data-mode="standard" onclick="setMode('standard',this)">标准</button>
+        <button class="mode-btn" data-mode="skill-only" onclick="setMode('skill-only',this)">纯技能</button>
+        <button class="mode-btn" data-mode="deep" onclick="setMode('deep',this)">深度</button>
+      </div>
+    </div>
+    <div class="write-layout">
+      <div class="write-input">
+        <label>创作指令（选择技能后按模板生成）</label>
+        <textarea id="write-instruction" rows="6" placeholder="例：写第一章开篇，主角是个被逐出宗门的废柴少年...&#10;&#10;或：续写第三章，主角第一次使用金手指..."></textarea>
+        <div style="margin-top:12px;display:flex;gap:10px">
+          <select id="write-target" style="flex:1"></select>
+          <button class="btn btn-primary" id="btn-generate" onclick="generateChapter()">✨ AI 生成</button>
+        </div>
+      </div>
+      <div class="write-output" id="write-output">
+        <div style="color:var(--muted);text-align:center;padding-top:60px">选择目标章节，输入指令后生成。<br>生成的正文会自动追加到章节中。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agent 助手（自主剧情 Agent） -->
+  <div class="tab-panel" id="panel-agent" style="display:none">
+    <div class="card">
+      <div class="card-title"><span class="icon">🤖</span>自主剧情 Agent</div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:14px">
+        写完后点「分析本章」，Agent 会自动把章节里的新事件、人物状态、世界设定、关系变化、伏笔埋收写进记忆库；
+        再点「规划下一章」，Agent 基于完整记忆生成接下来的大纲，写作时自动注入精简状态包，防止剧情脱离设定。
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="syncProject()">🔄 全量同步（分析所有章节）</button>
+        <button class="btn btn-outline btn-sm" onclick="loadAgentPanel()">📊 刷新记忆状态</button>
+      </div>
+      <div class="progress-wrap" id="sync-progress">
+        <div class="progress-head">
+          <span id="sync-progress-title">正在同步...</span>
+          <span id="sync-progress-percent">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="sync-progress-fill"></div></div>
+        <div class="progress-text" id="sync-progress-text"></div>
+      </div>
+    </div>
+
+    <!-- 记忆统计 -->
+    <div class="grid grid-3" id="agent-stats" style="margin-bottom:16px">
+      <div class="card"><div class="card-title">🧠 记忆统计</div><div style="font-size:13px;color:var(--muted)" id="agent-stats-body">加载中...</div></div>
+    </div>
+
+    <!-- 下一章规划 -->
+    <div class="card">
+      <div class="card-title"><span class="icon">🗺️</span>规划下一章</div>
+      <div class="form-row">
+        <div><label>对下一章的指令（可留空，Agent 自主判断）</label>
+          <textarea id="plan-instruction" rows="2" placeholder="例：主角进入剑冢后先遭遇一名筑基杀手，制造惊险场面；结尾引出神秘黑袍人的线索"></textarea>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="planNext()">🧭 生成下一章规划</button>
+      <div class="plan-card" id="plan-card">
+        <div class="plan-card-head">
+          <span class="plan-card-title" id="plan-title">下一章规划</span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline plan-btn" onclick="copyPlanToWrite()">✍️ 用于写作</button>
+            <button class="btn btn-primary plan-btn" onclick="createChapterFromPlan()">📄 按规划新建章节</button>
+          </div>
+        </div>
+        <div class="plan-card-body" id="plan-output"><div style="color:var(--muted);text-align:center;padding-top:30px">生成的大纲会显示在这里，可直接用于 AI 写作或一键新建章节</div></div>
+      </div>
+    </div>
+
+    <!-- 记忆库详情 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-title"><span class="icon">👥</span>人物关系（Agent 自动维护）</div>
+        <div id="agent-relationships" style="font-size:13px;color:var(--muted)">加载中...</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="icon">📜</span>剧情时间线（Agent 自动维护）</div>
+        <div id="agent-timeline" style="font-size:13px;color:var(--muted)">加载中...</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">🔗</span>伏笔库（Agent 自动埋收，可人工标记）</div>
+      <div id="agent-foreshadowing" style="font-size:13px;color:var(--muted)">加载中...</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">🌍</span>世界设定（随剧情自动扩充）</div>
+      <div id="agent-world" style="font-size:13px;color:var(--muted);white-space:pre-wrap;line-height:1.8">加载中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- 技能中心 -->
+<div class="page" id="page-skills">
+  <h2 class="page-title">写作技能库</h2>
+  <p class="page-sub">10 个预设写作技能，每个技能绑定相关知识主题，结构化生成、节省 token。</p>
+  <div class="grid grid-3" id="skill-grid"></div>
+</div>
+
+<!-- 知识库 -->
+<div class="page" id="page-knowledge">
+  <h2 class="page-title">写作知识库</h2>
+  <p class="page-sub">12 大主题网文写作资料，AI 写作时自动检索相关知识注入。</p>
+  <div class="toolbar">
+    <input id="kb-search" placeholder="语义搜索：如 '如何设计金手指'" style="flex:1;max-width:400px" onkeydown="if(event.key==='Enter')searchKB()">
+    <button class="btn btn-primary btn-sm" onclick="searchKB()">🔍 搜索</button>
+    <div class="spacer"></div>
+    <button class="btn btn-outline btn-sm" onclick="importKnowledge(false)">📥 导入知识库</button>
+  </div>
+  <div style="display:grid;grid-template-columns:220px 1fr;gap:20px">
+    <div class="card" style="align-self:start">
+      <div class="card-title"><span class="icon">📚</span>主题分类</div>
+      <div id="kb-topics"></div>
+    </div>
+    <div id="kb-content"></div>
+  </div>
+</div>
+
+<!-- 人物弹窗 -->
+<div class="modal-overlay" id="modal-character">
+  <div class="modal">
+    <h3 id="character-modal-title">添加人物</h3>
+    <input type="hidden" id="char-id">
+    <div class="form-row"><div><label>姓名 *</label><input id="char-name" placeholder="人物姓名"></div><div><label>年龄</label><input id="char-age" placeholder="如：18岁"></div></div>
+    <div class="form-row"><div><label>身份</label><input id="char-identity" placeholder="如：被逐出宗门的弟子"></div></div>
+    <div class="form-row"><div><label>外貌</label><textarea id="char-appearance" rows="2" placeholder="外貌特征、记忆点"></textarea></div></div>
+    <div class="form-row"><div><label>性格</label><textarea id="char-personality" rows="2" placeholder="核心性格、表里差异"></textarea></div></div>
+    <div class="form-row"><div><label>背景故事</label><textarea id="char-background" rows="2" placeholder="与主线相关的过往"></textarea></div></div>
+    <div class="form-row"><div><label>动机</label><textarea id="char-motivation" rows="2" placeholder="深层欲望"></textarea></div></div>
+    <div class="form-row"><div><label>人物关系</label><textarea id="char-relationships" rows="2" placeholder="与其他角色的关系"></textarea></div></div>
+    <div class="form-row"><div><label>说话风格</label><textarea id="char-speech" rows="2" placeholder="口头禅、句式习惯"></textarea></div></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-character')">取消</button>
+      <button class="btn btn-primary" onclick="saveCharacter()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 章节弹窗 -->
+<div class="modal-overlay" id="modal-chapter">
+  <div class="modal">
+    <h3 id="chapter-modal-title">新建章节</h3>
+    <input type="hidden" id="chap-id">
+    <div class="form-row"><div><label>章节标题 *</label><input id="chap-title" placeholder="如：第一章 废柴觉醒"></div></div>
+    <div class="form-row"><div><label>章节内容</label><textarea id="chap-content" rows="12" placeholder="正文内容（可选，AI 生成会自动追加）"></textarea></div></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-chapter')">取消</button>
+      <button class="btn btn-primary" onclick="saveChapter()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 导入已有小说弹窗 -->
+<div class="modal-overlay" id="modal-import">
+  <div class="modal">
+    <h3>📥 导入已有小说</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">支持 .txt / .md 文件或直接粘贴文本，自动按「第X章/回/节」标题拆分导入为章节。<br>导入后 AI 续写时会自动读取最近章节，保持剧情连贯。</p>
+    <div class="form-row">
+      <div>
+        <label>选择文件</label>
+        <input type="file" id="import-file" accept=".txt,.md" style="padding:8px">
+      </div>
+    </div>
+    <div style="text-align:center;color:var(--muted);font-size:13px;margin:4px 0 10px">— 或 —</div>
+    <div class="form-row"><div><label>粘贴小说全文</label><textarea id="import-content" rows="14" placeholder="粘贴你的小说全文，包含章节标题（如：第一章 xxx）"></textarea></div></div>
+    <div id="import-preview" style="font-size:13px;color:#a5b4fc;margin-bottom:8px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-import')">取消</button>
+      <button class="btn btn-primary" onclick="doImport()">🚀 拆分导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- 项目弹窗 -->
+<div class="modal-overlay" id="modal-project">
+  <div class="modal">
+    <h3>新建小说</h3>
+    <div class="form-row"><div><label>书名 *</label><input id="proj-title" placeholder="如：我靠修炼系统无敌了"></div></div>
+    <div class="form-row"><div><label>题材</label><input id="proj-genre" placeholder="如：玄幻 / 都市 / 悬疑 / 女频"></div></div>
+    <div class="form-row"><div><label>简介</label><textarea id="proj-desc" rows="3" placeholder="一句话卖点或简介"></textarea></div></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-project')">取消</button>
+      <button class="btn btn-primary" onclick="saveProject()">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- 章节阅读弹窗 -->
+<div class="modal-overlay" id="modal-read">
+  <div class="modal" style="max-width:760px">
+    <h3 id="read-title"></h3>
+    <div id="read-summary" style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:8px;padding:10px 14px;font-size:13px;color:#a5b4fc;margin-bottom:12px;white-space:pre-wrap"></div>
+    <div id="read-content" style="font-size:14px;line-height:2;white-space:pre-wrap"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-sm" id="btn-summarize" onclick="summarizeChapter()">🤖 生成摘要</button>
+      <button class="btn btn-outline btn-sm" id="btn-analyze" onclick="analyzeChapter()">🧠 分析本章（更新记忆）</button>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn btn-primary" onclick="closeModal('modal-read')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 技能详情弹窗 -->
+<div class="modal-overlay" id="modal-skill">
+  <div class="modal">
+    <h3 id="skill-detail-name"></h3>
+    <div id="skill-detail-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeModal('modal-skill')">知道了</button>
+    </div>
+  </div>
+</div>
+
+<!-- 作者登录/注册弹窗 -->
+<div class="modal-overlay" id="modal-auth">
+  <div class="modal" style="max-width:380px">
+    <h3 id="auth-title">作者登录</h3>
+    <div class="auth-tabs">
+      <button id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">登 录</button>
+      <button id="tab-register" class="auth-tab" onclick="switchAuthTab('register')">注 册</button>
+    </div>
+    <div class="form-row"><div><label>用户名</label><input id="auth-username" placeholder="2-32 个字符"></div></div>
+    <div class="form-row"><div><label>密码</label><input id="auth-password" type="password" placeholder="至少 6 位"></div></div>
+    <p class="auth-tip" id="auth-tip">登录后管理你的小说项目。首个注册账号会自动接管本机已有项目。</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-auth')">取消</button>
+      <button class="btn btn-primary" id="btn-auth" onclick="submitAuth()">登 录</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ 全局状态 ============
+let currentProject = null;
+let currentSkillMode = 'standard';
+let skills = [];
+let topics = [];
+let editingCharId = null;
+let editingChapId = null;
+let readingChapId = null;
+
+const API = '/api';
+
+// ============ 工具函数 ============
+async function api(url, method='GET', body=null) {
+  const opts = { method, headers: {} };
+  const token = localStorage.getItem('token');
+  if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  const resp = await fetch(API + url, opts);
+  if (resp.status === 401) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    updateAuthUI();
+    const authModal = document.getElementById('modal-auth');
+    if (!authModal.classList.contains('show')) openAuthModal('login');
+    throw new Error('请先登录');
+  }
+  if (!resp.ok) {
+    const err = await resp.json().catch(()=>({detail:'请求失败'}));
+    throw new Error(err.detail || '请求失败');
+  }
+  return resp.json();
+}
+
+function toast(msg, type='info') {
+  const el = document.getElementById('toast');
+  const item = document.createElement('div');
+  item.className = 'toast-item ' + (type === 'success' ? 'success' : type === 'error' ? 'error' : '');
+  item.textContent = msg;
+  el.appendChild(item);
+  setTimeout(()=>item.remove(), 3200);
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+}
+
+// ============ 导航 ============
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(l=>l.classList.toggle('active', l.dataset.page === page));
+  if (page === 'skills') loadSkillsPage();
+  if (page === 'knowledge') loadKnowledgePage();
+  if (page === 'projects') loadProjects();
+}
+
+document.querySelectorAll('.nav-link').forEach(l=>{
+  l.addEventListener('click', e=>{ e.preventDefault(); navigate(l.dataset.page); });
+});
+
+window.addEventListener('hashchange', ()=>{
+  const h = location.hash.replace('#','');
+  if (h === 'skills' || h === 'knowledge' || h === 'projects') navigate(h);
+});
+
+// ============ 项目 ============
+async function loadProjects() {
+  const el = document.getElementById('project-list');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div><br>加载中...</div>';
+  try {
+    const data = await api('/projects');
+    if (!data.items.length) {
+      el.innerHTML = '<div class="empty"><div class="icon">📚</div><h3>还没有小说项目</h3><p>点击右上角「新建小说」开始创作</p></div>';
+      return;
+    }
+    el.innerHTML = data.items.map(p=>`
+      <div class="list-item">
+        <div class="item-main" onclick="openWorkspace('${p.id}')" style="cursor:pointer">
+          <div class="item-title">${esc(p.title)}</div>
+          <div class="item-sub">${esc(p.genre || '未分类')} · ${esc(p.description || '暂无简介')}</div>
+        </div>
+        <div class="item-actions">
+          <button class="btn btn-outline btn-sm" onclick="openWorkspace('${p.id}')">✏️ 进入</button>
+          <button class="btn btn-danger btn-sm" onclick="removeProject('${p.id}')">删除</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>'; }
+}
+
+function openCreateProject() {
+  document.getElementById('proj-title').value = '';
+  document.getElementById('proj-genre').value = '';
+  document.getElementById('proj-desc').value = '';
+  openModal('modal-project');
+}
+
+async function saveProject() {
+  const title = document.getElementById('proj-title').value.trim();
+  if (!title) { toast('请输入书名','error'); return; }
+  try {
+    await api('/projects', 'POST', {
+      title,
+      genre: document.getElementById('proj-genre').value.trim(),
+      description: document.getElementById('proj-desc').value.trim(),
+    });
+    closeModal('modal-project');
+    toast('项目创建成功','success');
+    loadProjects();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function removeProject(pid) {
+  if (!confirm('确定删除这个项目吗？所有大纲、人物、章节都会删除！')) return;
+  try {
+    await api('/projects/' + pid, 'DELETE');
+    toast('项目已删除','success');
+    loadProjects();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// ============ 工作台 ============
+function goProjects() {
+  navigate('projects');
+  currentProject = null;
+}
+
+async function openWorkspace(pid) {
+  try {
+    const p = await api('/projects/' + pid);
+    currentProject = p;
+    document.getElementById('ws-project-info').textContent = `${p.title}（${p.genre || '未分类'}）`;
+    navigate('projects'); // 切换到工作台页
+    document.getElementById('page-projects').classList.remove('active');
+    document.getElementById('page-workspace').classList.add('active');
+    switchTab('chapters');
+    await loadCharacters();
+    await loadChapters();
+    await loadWriteTargets();
+    await loadSkills();
+    await loadTopics();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('#ws-tabs .tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
+  ['characters','chapters','writing','agent'].forEach(t=>{
+    document.getElementById('panel-' + t).style.display = t===tab ? 'block' : 'none';
+  });
+  if (tab==='writing') loadWriteTargets();
+  if (tab==='agent') loadAgentPanel();
+}
+
+document.querySelectorAll('#ws-tabs .tab').forEach(t=>{
+  t.addEventListener('click', ()=>switchTab(t.dataset.tab));
+});
+
+// ============ 人物 ============
+async function loadCharacters() {
+  if (!currentProject) return;
+  const el = document.getElementById('character-list');
+  try {
+    const chars = await api(`/projects/${currentProject.id}/characters`);
+    if (!chars.length) {
+      el.innerHTML = '<div class="empty"><div class="icon">👤</div><p>还没有人物，点击「添加人物」创建人物卡</p></div>';
+      return;
+    }
+    el.innerHTML = chars.map(c=>`
+      <div class="list-item">
+        <div class="item-main">
+          <div class="item-title">${esc(c.name)} <span class="badge" style="margin-left:8px">${esc(c.identity||'未设定身份')}</span></div>
+          <div class="item-sub">${esc(c.personality||'')}${c.motivation ? ' · 动机：' + esc(c.motivation.slice(0,30)) : ''}</div>
+        </div>
+        <div class="item-actions">
+          <button class="btn btn-outline btn-sm" onclick='openCharacterModal(${JSON.stringify(c)})'>编辑</button>
+          <button class="btn btn-danger btn-sm" onclick="removeCharacter('${c.id}')">删除</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+}
+
+function openCharacterModal(c) {
+  editingCharId = c ? c.id : null;
+  document.getElementById('character-modal-title').textContent = c ? '编辑人物' : '添加人物';
+  document.getElementById('char-id').value = c ? c.id : '';
+  document.getElementById('char-name').value = c ? c.name : '';
+  document.getElementById('char-age').value = c ? (c.age||'') : '';
+  document.getElementById('char-identity').value = c ? (c.identity||'') : '';
+  document.getElementById('char-appearance').value = c ? (c.appearance||'') : '';
+  document.getElementById('char-personality').value = c ? (c.personality||'') : '';
+  document.getElementById('char-background').value = c ? (c.background||'') : '';
+  document.getElementById('char-motivation').value = c ? (c.motivation||'') : '';
+  document.getElementById('char-relationships').value = c ? (c.relationships||'') : '';
+  document.getElementById('char-speech').value = c ? (c.speech_style||'') : '';
+  openModal('modal-character');
+}
+
+async function saveCharacter() {
+  if (!currentProject) return;
+  const name = document.getElementById('char-name').value.trim();
+  if (!name) { toast('请输入姓名','error'); return; }
+  const data = {
+    name,
+    age: document.getElementById('char-age').value.trim(),
+    identity: document.getElementById('char-identity').value.trim(),
+    appearance: document.getElementById('char-appearance').value,
+    personality: document.getElementById('char-personality').value,
+    background: document.getElementById('char-background').value,
+    motivation: document.getElementById('char-motivation').value,
+    relationships: document.getElementById('char-relationships').value,
+    speech_style: document.getElementById('char-speech').value,
+  };
+  try {
+    if (editingCharId) {
+      await api(`/projects/${currentProject.id}/characters/${editingCharId}`, 'PATCH', data);
+      toast('人物已更新','success');
+    } else {
+      await api(`/projects/${currentProject.id}/characters`, 'POST', data);
+      toast('人物已添加','success');
+    }
+    closeModal('modal-character');
+    loadCharacters();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function removeCharacter(cid) {
+  if (!currentProject || !confirm('确定删除这个人物的卡片吗？')) return;
+  try {
+    await api(`/projects/${currentProject.id}/characters/${cid}`, 'DELETE');
+    toast('人物已删除','success');
+    loadCharacters();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// ============ 章节 ============
+async function loadChapters() {
+  if (!currentProject) return;
+  const el = document.getElementById('chapter-list');
+  try {
+    const data = await api(`/projects/${currentProject.id}/chapters`);
+    if (!data.items.length) {
+      el.innerHTML = '<div class="empty"><div class="icon">📄</div><p>还没有章节，点击「新建章节」或直接用 AI 写作</p></div>';
+      return;
+    }
+    el.innerHTML = data.items.map(c=>`
+      <div class="list-item">
+        <div class="item-main" style="cursor:pointer" onclick="readChapter('${c.id}')">
+          <div class="item-title">第${c.chapter_number}章 ${esc(c.title)}</div>
+          <div class="item-sub">${c.word_count||0} 字 · ${esc(c.status||'draft')}${c.summary ? ' · ' + esc(c.summary.slice(0,50)) : ''}</div>
+        </div>
+        <div class="item-actions">
+          <button class="btn btn-outline btn-sm" onclick="readChapter('${c.id}')">阅读</button>
+          <button class="btn btn-outline btn-sm" onclick="editChapter('${c.id}')">编辑</button>
+          <button class="btn btn-danger btn-sm" onclick="removeChapter('${c.id}')">删除</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+}
+
+function openChapterModal() {
+  editingChapId = null;
+  document.getElementById('chapter-modal-title').textContent = '新建章节';
+  document.getElementById('chap-id').value = '';
+  document.getElementById('chap-title').value = '';
+  document.getElementById('chap-content').value = '';
+  openModal('modal-chapter');
+}
+
+async function editChapter(cid) {
+  if (!currentProject) return;
+  try {
+    const c = await api(`/projects/${currentProject.id}/chapters/${cid}`);
+    editingChapId = cid;
+    document.getElementById('chapter-modal-title').textContent = '编辑章节';
+    document.getElementById('chap-id').value = cid;
+    document.getElementById('chap-title').value = c.title;
+    document.getElementById('chap-content').value = c.content || '';
+    openModal('modal-chapter');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function saveChapter() {
+  if (!currentProject) return;
+  const title = document.getElementById('chap-title').value.trim();
+  if (!title) { toast('请输入章节标题','error'); return; }
+  const data = {
+    title,
+    content: document.getElementById('chap-content').value,
+  };
+  try {
+    if (editingChapId) {
+      await api(`/projects/${currentProject.id}/chapters/${editingChapId}`, 'PATCH', data);
+      toast('章节已更新','success');
+    } else {
+      await api(`/projects/${currentProject.id}/chapters`, 'POST', data);
+      toast('章节已创建','success');
+    }
+    closeModal('modal-chapter');
+    loadChapters();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function removeChapter(cid) {
+  if (!currentProject || !confirm('确定删除这个章节吗？')) return;
+  try {
+    await api(`/projects/${currentProject.id}/chapters/${cid}`, 'DELETE');
+    toast('章节已删除','success');
+    loadChapters();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// ============ 导入已有小说 ============
+function openImportModal() {
+  document.getElementById('import-content').value = '';
+  document.getElementById('import-file').value = '';
+  document.getElementById('import-preview').textContent = '';
+  document.getElementById('import-file').addEventListener('change', (e)=>{
+    const f = e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = ()=> {
+      document.getElementById('import-content').value = reader.result;
+      previewImport();
+    };
+    reader.readAsText(f, 'utf-8');
+  });
+  openModal('modal-import');
+}
+
+function previewImport() {
+  const content = document.getElementById('import-content').value.trim();
+  if (!content) { document.getElementById('import-preview').textContent = ''; return; }
+  const m = content.match(/^\s*第[一二三四五六七八九十百千万零〇0-9０-９]+[章回节卷]/gm);
+  const n = m ? m.length : 1;
+  document.getElementById('import-preview').textContent =
+    `检测到约 ${n} 章${m ? '（' + m.slice(0,5).join('、') + (m.length>5?'...':'') + '）' : '（无章节标题，将作为一整章导入）'}，导入后可在章节列表查看。`;
+}
+
+async function doImport() {
+  if (!currentProject) return;
+  const content = document.getElementById('import-content').value.trim();
+  if (!content) { toast('请先选择文件或粘贴小说内容','error'); return; }
+  try {
+    const r = await api(`/projects/${currentProject.id}/chapters/import`, 'POST', { content });
+    toast(r.message || `导入 ${r.imported} 章`,'success');
+    closeModal('modal-import');
+    loadChapters();
+    loadWriteTargets();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function readChapter(cid) {
+  if (!currentProject) return;
+  try {
+    const c = await api(`/projects/${currentProject.id}/chapters/${cid}`);
+    readingChapId = cid;
+    document.getElementById('read-title').textContent = `第${c.chapter_number}章 ${c.title}`;
+    document.getElementById('read-summary').textContent = c.summary ? '📌 ' + c.summary : '（暂无摘要，可点击生成）';
+    document.getElementById('read-content').textContent = c.content || '（空章节）';
+    openModal('modal-read');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function summarizeChapter() {
+  if (!currentProject || !readingChapId) return;
+  const btn = document.getElementById('btn-summarize');
+  btn.disabled = true; btn.textContent = '生成中...';
+  try {
+    const c = await api(`/projects/${currentProject.id}/chapters/${readingChapId}/summarize`, 'POST');
+    document.getElementById('read-summary').textContent = '📌 ' + c.summary;
+    toast('摘要已生成','success');
+  } catch(e) { toast(e.message,'error'); }
+  btn.disabled = false; btn.textContent = '🤖 生成摘要';
+}
+
+// ============ Agent 助手 ============
+async function analyzeChapter() {
+  if (!currentProject || !readingChapId) return;
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = true; btn.textContent = '分析中...';
+  try {
+    const r = await api(`/projects/${currentProject.id}/chapters/${readingChapId}/analyze`, 'POST');
+    const a = r.applied || {};
+    const msg = `分析完成：人物 ${a.characters||0} · 设定 ${a.world||0} · 关系 ${a.relationships||0} · 新伏笔 ${a.foreshadowing_planted||0} · 回收伏笔 ${a.foreshadowing_resolved||0} · 时间线 ${a.timeline||0}`;
+    toast(msg, 'success');
+    if (r.analysis && r.analysis.chapter_summary) {
+      document.getElementById('read-summary').textContent = '📌 ' + r.analysis.chapter_summary;
+    }
+    loadAgentPanel();
+  } catch(e) { toast(e.message,'error'); }
+  btn.disabled = false; btn.textContent = '🧠 分析本章（更新记忆）';
+}
+
+async function loadAgentPanel() {
+  if (!currentProject) return;
+  try {
+    const [stats, state] = await Promise.all([
+      api(`/projects/${currentProject.id}/memory-stats`),
+      api(`/projects/${currentProject.id}/story-state`),
+    ]);
+    document.getElementById('agent-stats-body').innerHTML = `
+      <div style="display:flex;gap:18px;flex-wrap:wrap">
+        <span>📄 章节 <b style="color:#a5b4fc">${stats.chapters}</b></span>
+        <span>👤 人物卡 <b style="color:#a5b4fc">${stats.characters}</b></span>
+        <span>📜 时间线 <b style="color:#a5b4fc">${stats.timeline}</b></span>
+        <span>🔗 关系 <b style="color:#a5b4fc">${stats.relationships}</b></span>
+        <span>🔓 未回收伏笔 <b style="color:#f59e0b">${stats.foreshadowing_open}</b></span>
+        <span>✅ 已回收伏笔 <b style="color:#4ade80">${stats.foreshadowing_resolved}</b></span>
+      </div>`;
+
+    // 关系
+    const relEl = document.getElementById('agent-relationships');
+    if (!state.relationships.length) {
+      relEl.innerHTML = '<div style="padding:8px 0">暂无关系记录，分析章节后自动生成</div>';
+    } else {
+      relEl.innerHTML = state.relationships.map(r=>`
+        <div class="kb-item">
+          <div><b>${esc(r.char_a)}</b> — <b>${esc(r.char_b)}</b>
+            <span class="badge" style="margin-left:6px">${esc(r.relation||'')}</span>
+            <span class="badge ${r.sentiment==='positive'?'badge-success':r.sentiment==='negative'?'':'badge-primary'}">${esc(r.sentiment)}/${esc(r.trend)}</span>
+          </div>
+          <div class="kb-meta">最近变化：第${r.last_change_chapter||'?'}章${r.note ? ' · ' + esc(r.note.slice(0,60)) : ''}</div>
+          <div style="margin-top:6px"><button class="btn btn-danger btn-sm" onclick="deleteRelationship('${r.id}')">删除</button></div>
+        </div>`).join('');
+    }
+
+    // 时间线
+    const tlEl = document.getElementById('agent-timeline');
+    if (!state.timeline.length) {
+      tlEl.innerHTML = '<div style="padding:8px 0">暂无时间线，分析章节后自动生成</div>';
+    } else {
+      tlEl.innerHTML = state.timeline.slice(-12).reverse().map(t=>`
+        <div class="kb-item">
+          <div><b>第${t.chapter_number}章</b> @ ${esc(t.location||'未知地点')} <span class="badge">${(t.characters||[]).join('、')}</span></div>
+          <p style="font-size:12px;line-height:1.7">${esc(t.events||'')}</p>
+        </div>`).join('');
+    }
+
+    // 伏笔
+    const fhEl = document.getElementById('agent-foreshadowing');
+    const openList = state.foreshadowing_open || [];
+    const resolvedList = state.foreshadowing_resolved || [];
+    if (!openList.length && !resolvedList.length) {
+      fhEl.innerHTML = '<div style="padding:8px 0">暂无伏笔，分析章节后自动识别</div>';
+    } else {
+      fhEl.innerHTML =
+        (openList.length ? '<div class="section-label">🔓 未回收</div>' : '') +
+        openList.map(f=>`
+          <div class="list-item">
+            <div class="item-main">
+              <div class="item-title" style="font-size:14px">${esc(f.description)}</div>
+              <div class="item-sub">第${f.planted_chapter}章埋 · ${esc(f.type)} · 重要度 ${esc(f.importance)}</div>
+            </div>
+            <div class="item-actions">
+              <button class="btn btn-outline btn-sm" onclick="resolveForeshadow('${f.id}')">✅ 标记已回收</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteForeshadow('${f.id}')">删除</button>
+            </div>
+          </div>`).join('') +
+        (resolvedList.length ? '<div class="section-label">✅ 已回收</div>' : '') +
+        resolvedList.slice(-8).reverse().map(f=>`
+          <div class="list-item" style="opacity:.7">
+            <div class="item-main">
+              <div class="item-title" style="font-size:14px">${esc(f.description)}</div>
+              <div class="item-sub">第${f.planted_chapter}章埋 → 第${f.resolved_chapter}章回收</div>
+            </div>
+          </div>`).join('');
+    }
+
+    // 世界设定
+    const world = (state.outline && state.outline.world_setting) || '';
+    document.getElementById('agent-world').textContent = world || '（暂无，分析章节后自动扩充）';
+  } catch(e) { toast(e.message,'error'); }
+}
+
+let syncTimer = null;
+
+function renderSyncProgress(s) {
+  const wrap = document.getElementById('sync-progress');
+  const fill = document.getElementById('sync-progress-fill');
+  const title = document.getElementById('sync-progress-title');
+  const percent = document.getElementById('sync-progress-percent');
+  const text = document.getElementById('sync-progress-text');
+  if (s.status === 'idle') { wrap.classList.remove('show'); return; }
+  wrap.classList.add('show');
+  const pct = s.total > 0 ? Math.round(s.done / s.total * 100) : 100;
+  fill.style.width = pct + '%';
+  percent.textContent = pct + '%';
+  if (s.status === 'running') {
+    title.textContent = s.total > 0
+      ? `正在分析第 ${s.current_chapter} 章…（${s.done}/${s.total}）`
+      : '同步中…';
+    text.textContent = `已同步：${s.synced.length ? s.synced.join('、') : '无'}${s.errors.length ? '\n失败：' + s.errors.join('；') : ''}`;
+  } else if (s.status === 'done') {
+    title.textContent = '✅ 同步完成';
+    text.textContent = `成功 ${s.synced.length} 章${s.errors.length ? '，失败 ' + s.errors.length + ' 章：' + s.errors.join('；') : ''}`;
+    if (s.total === 0) text.textContent = '所有章节已同步，无需重复分析';
+  } else if (s.status === 'error') {
+    title.textContent = '❌ 同步失败';
+    text.textContent = s.errors.join('；');
+  }
+}
+
+async function syncProject() {
+  if (!currentProject) return;
+  if (!confirm('将分析所有尚未同步的章节并更新记忆库，可能耗时较长，继续？')) return;
+  // 先查是否已有任务在跑
+  try {
+    const cur = await api(`/projects/${currentProject.id}/sync-status`);
+    if (cur.status === 'running') { renderSyncProgress(cur); startSyncPolling(); return; }
+  } catch(e) { /* 忽略 */ }
+  try {
+    const r = await api(`/projects/${currentProject.id}/sync`, 'POST');
+    renderSyncProgress(r);
+    startSyncPolling();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function startSyncPolling() {
+  if (syncTimer) clearInterval(syncTimer);
+  syncTimer = setInterval(async () => {
+    if (!currentProject) { clearInterval(syncTimer); syncTimer = null; return; }
+    try {
+      const s = await api(`/projects/${currentProject.id}/sync-status`);
+      renderSyncProgress(s);
+      if (s.status === 'done' || s.status === 'error') {
+        clearInterval(syncTimer); syncTimer = null;
+        loadAgentPanel();
+        if (s.status === 'done') {
+          toast(s.total === 0 ? '所有章节已同步' : `同步完成：${s.synced.length} 章`, 'success');
+        }
+        if (s.errors && s.errors.length) toast('部分失败：' + s.errors.join('；'), 'error');
+        setTimeout(()=>{ document.getElementById('sync-progress').classList.remove('show'); }, 5000);
+      }
+    } catch(e) { /* 轮询失败忽略，下轮重试 */ }
+  }, 2000);
+}
+
+async function planNext() {
+  if (!currentProject) return;
+  const instruction = document.getElementById('plan-instruction').value.trim();
+  const card = document.getElementById('plan-card');
+  const title = document.getElementById('plan-title');
+  const out = document.getElementById('plan-output');
+  card.style.display = 'block';
+  title.textContent = '第 ' + (currentPlanChapter || '') + ' 章规划';
+  out.textContent = 'Agent 正在通读记忆与最新章节，规划下一章...';
+  const btn = document.querySelector('#panel-agent button[onclick="planNext()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 规划中...'; }
+  try {
+    const r = await api(`/projects/${currentProject.id}/plan-next`, 'POST', { instruction });
+    currentPlan = r;
+    currentPlanChapter = r.chapter_number;
+    title.textContent = '第 ' + r.chapter_number + ' 章 · ' + (r.title || '未命名');
+    // 标题行已在卡片头部展示，正文中移除，避免重复
+    let body = r.plan.replace(/本章标题\s*[（(]建议[）)]\s*[：:][^\n]*\n?/, '').trim();
+    out.textContent = body;
+    toast('下一章规划已生成（建议章节名：' + (r.title || '未命名') + '）','success');
+  } catch(e) { out.textContent = '规划失败：' + e.message; toast(e.message,'error'); }
+  if (btn) { btn.disabled = false; btn.textContent = '🧭 生成下一章规划'; }
+}
+
+let currentPlan = null, currentPlanChapter = null;
+
+// 把规划作为创作指令填入 AI 写作页
+function copyPlanToWrite() {
+  if (!currentPlan) return;
+  const instruction = document.getElementById('plan-instruction').value.trim();
+  document.getElementById('write-instruction').value = (instruction ? instruction + '\n\n' : '')
+    + '请严格按照以下大纲续写第' + currentPlan.chapter_number + '章：\n' + currentPlan.plan;
+  switchTab('writing');
+  loadWriteTargets();
+  toast('规划已填入创作指令，请在 AI 写作页选择目标章节','success');
+}
+
+// 按规划自动新建章节（使用建议章节名）
+async function createChapterFromPlan() {
+  if (!currentProject || !currentPlan) return;
+  try {
+    const ch = await api(`/projects/${currentProject.id}/chapters`, 'POST', {
+      chapter_number: currentPlan.chapter_number,
+      title: currentPlan.title || ('第' + currentPlan.chapter_number + '章'),
+      content: '',
+    });
+    toast('已创建章节《' + ch.title + '》，去 AI 写作生成正文吧','success');
+    switchTab('writing');
+    loadWriteTargets();
+    loadChapters();
+    // 自动选中新章节
+    setTimeout(()=>{
+      const sel = document.getElementById('write-target');
+      const opt = [...sel.options].find(o => String(o.value) === String(ch.id));
+      if (opt) sel.value = opt.value;
+    }, 600);
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function resolveForeshadow(fid) {
+  if (!currentProject) return;
+  try {
+    await api(`/projects/${currentProject.id}/foreshadowing/${fid}`, 'PATCH', { status: 'resolved' });
+    toast('已标记回收','success');
+    loadAgentPanel();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function deleteForeshadow(fid) {
+  if (!currentProject || !confirm('确定删除这条伏笔记录？')) return;
+  try {
+    await api(`/projects/${currentProject.id}/foreshadowing/${fid}`, 'DELETE');
+    toast('已删除','success');
+    loadAgentPanel();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function deleteRelationship(rid) {
+  if (!currentProject || !confirm('确定删除这条关系记录？')) return;
+  try {
+    await api(`/projects/${currentProject.id}/relationships/${rid}`, 'DELETE');
+    toast('已删除','success');
+    loadAgentPanel();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// ============ AI 写作 ============
+async function loadSkills() {
+  try {
+    skills = await api('/skills');
+    const sel = document.getElementById('write-skill');
+    sel.innerHTML = '<option value="auto">技能：自动匹配</option>' +
+      skills.map(s=>`<option value="${s.id}">${s.icon} ${s.name}</option>`).join('');
+  } catch(e) { /* 忽略 */ }
+}
+
+async function loadTopics() {
+  try {
+    topics = await api('/knowledge/topics');
+    const sel = document.getElementById('write-topic');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="auto">参考主题：自动</option>' +
+      topics.map(t=>`<option value="${esc(t.topic)}">${esc(t.topic)}（${t.count}）</option>`).join('');
+    sel.value = cur;
+  } catch(e) { /* 忽略 */ }
+}
+
+async function loadWriteTargets() {
+  if (!currentProject) return;
+  try {
+    const data = await api(`/projects/${currentProject.id}/chapters`);
+    const sel = document.getElementById('write-target');
+    sel.innerHTML = data.items.length
+      ? data.items.map(c=>`<option value="${c.id}">第${c.chapter_number}章 ${esc(c.title)}</option>`).join('')
+      : '<option value="">（暂无章节，请先新建）</option>';
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function setMode(mode, btn) {
+  currentSkillMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
+}
+
+async function generateChapter() {
+  if (!currentProject) return;
+  const target = document.getElementById('write-target').value;
+  const instruction = document.getElementById('write-instruction').value.trim();
+  if (!target) { toast('请先在「章节」页新建一个章节作为生成目标','error'); return; }
+  if (!instruction) { toast('请输入创作指令','error'); return; }
+
+  const btn = document.getElementById('btn-generate');
+  btn.disabled = true; btn.textContent = '⏳ AI 创作中...';
+  const out = document.getElementById('write-output');
+  out.textContent = 'AI 正在创作（约需 1-3 分钟，取决于模型速度），请耐心等待...\n';
+
+  try {
+    const skillId = document.getElementById('write-skill').value;
+    const topic = document.getElementById('write-topic').value;
+    const c = await api(`/projects/${currentProject.id}/chapters/${target}/generate`, 'POST', {
+      writing_instruction: instruction,
+      skill_id: skillId,
+      skill_mode: currentSkillMode,
+      selected_topic: topic,
+    });
+    out.textContent = c.content;
+    toast('AI 生成完成，已追加到章节','success');
+    loadChapters();
+  } catch(e) {
+    out.textContent = '生成失败：' + e.message;
+    toast(e.message,'error');
+  }
+  btn.disabled = false; btn.textContent = '✨ AI 生成';
+}
+
+// ============ 知识库 ============
+async function loadKnowledgePage() {
+  const topicsEl = document.getElementById('kb-topics');
+  topicsEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  document.getElementById('kb-content').innerHTML = '';
+  try {
+    topics = await api('/knowledge/topics');
+    if (!topics.length) {
+      topicsEl.innerHTML = '<p style="color:var(--muted);font-size:13px">暂无知识，点击「导入知识库」</p>';
+      return;
+    }
+    topicsEl.innerHTML = topics.map((t,i)=>`
+      <button class="list-item" style="width:100%;text-align:left;cursor:pointer" onclick="showTopic('${esc(t.topic)}')">
+        <div class="item-main">
+          <div class="item-title" style="font-size:14px">${esc(t.topic)}</div>
+          <div class="item-sub">${t.count} 条</div>
+        </div>
+      </button>`).join('');
+    showTopic(topics[0].topic);
+  } catch(e) { topicsEl.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+}
+
+async function showTopic(topic) {
+  const el = document.getElementById('kb-content');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const chunks = await api('/knowledge/topic/' + encodeURIComponent(topic));
+    el.innerHTML = chunks.map(c=>`
+      <div class="kb-item">
+        <h4>${esc(c.title)}</h4>
+        <p>${esc(c.content)}</p>
+        <div class="kb-meta">来源：${esc(c.source||'')} · 主题：${esc(c.topic)}</div>
+      </div>`).join('') || '<div class="empty">暂无内容</div>';
+  } catch(e) { el.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+}
+
+async function searchKB() {
+  const q = document.getElementById('kb-search').value.trim();
+  if (!q) { loadKnowledgePage(); return; }
+  const el = document.getElementById('kb-content');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const chunks = await api('/knowledge/search', 'POST', { query: q });
+    el.innerHTML = '<div class="card"><div class="card-title">🔍 搜索结果：' + esc(q) + '</div></div>' +
+      chunks.map(c=>`
+      <div class="kb-item">
+        <h4>${esc(c.title)} <span class="badge">${esc(c.topic)}</span></h4>
+        <p>${esc(c.content)}</p>
+        <div class="kb-meta">来源：${esc(c.source||'')}</div>
+      </div>`).join('') || '<div class="empty">未找到相关知识，换个关键词试试</div>';
+  } catch(e) { el.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+}
+
+async function importKnowledge(overwrite) {
+  const msg = overwrite ? '确定清空并重新导入全部知识库吗？' : '从本地 knowledge_base 目录导入知识库？';
+  if (!confirm(msg)) return;
+  try {
+    const r = await api('/knowledge/import', 'POST', { overwrite });
+    toast(`导入完成：新增 ${r.imported} 条，跳过 ${r.skipped} 条，共 ${r.files} 个文件`,'success');
+    if (currentProject) loadTopics();
+    loadKnowledgePage();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// ============ 技能中心 ============
+async function loadSkillsPage() {
+  const el = document.getElementById('skill-grid');
+  try {
+    skills = await api('/skills');
+    el.innerHTML = skills.map(s=>`
+      <div class="skill-card" onclick='showSkillDetail(${JSON.stringify(s)})'>
+        <div class="skill-icon">${s.icon}</div>
+        <div class="skill-name">${esc(s.name)}</div>
+        <div class="skill-desc">${esc(s.scenario||'')}</div>
+        <div class="skill-tags">${(s.boundTopics||[]).slice(0,3).map(t=>`<span class="badge badge-primary">${esc(t)}</span>`).join('')}</div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+}
+
+function showSkillDetail(s) {
+  document.getElementById('skill-detail-name').textContent = s.icon + ' ' + s.name;
+  document.getElementById('skill-detail-body').innerHTML = `
+    <div class="section-label">适用场景</div>
+    <p style="font-size:14px;color:var(--muted);line-height:1.7">${esc(s.scenario||'')}</p>
+    <div class="section-label">执行步骤</div>
+    <ol style="padding-left:20px;font-size:14px;color:var(--muted);line-height:2">
+      ${(s.steps||[]).map(st=>`<li>${esc(st)}</li>`).join('')}
+    </ol>
+    <div class="section-label">输出格式</div>
+    <p style="font-size:14px;color:var(--muted);line-height:1.7">${esc(s.outputFormat||'')}</p>
+    <div class="section-label">绑定知识主题</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${(s.boundTopics||[]).map(t=>`<span class="badge badge-primary">${esc(t)}</span>`).join('')}</div>
+    <div class="section-label">技能说明</div>
+    <p style="font-size:14px;color:var(--muted);line-height:1.7">${esc(s.description||'')}</p>
+  `;
+  openModal('modal-skill');
+}
+
+// ============ 作者登录 / 注册 ============
+let authMode = 'login';
+
+function updateAuthUI() {
+  const el = document.getElementById('nav-auth');
+  let user = null;
+  try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch(e) {}
+  if (user && user.username) {
+    el.innerHTML = `<div class="user-chip">👤 <span>${esc(user.username)}</span>
+      <button class="btn btn-outline btn-sm" onclick="logout()">退出</button></div>`;
+  } else {
+    el.innerHTML = `
+      <button class="btn btn-outline btn-sm" onclick="openAuthModal('login')">登录</button>
+      <button class="btn btn-primary btn-sm" onclick="openAuthModal('register')">注册</button>`;
+  }
+}
+
+function openAuthModal(mode) {
+  authMode = mode;
+  switchAuthTab(mode);
+  document.getElementById('auth-username').value = '';
+  document.getElementById('auth-password').value = '';
+  openModal('modal-auth');
+  setTimeout(()=>document.getElementById('auth-username').focus(), 100);
+}
+
+function switchAuthTab(mode) {
+  authMode = mode;
+  document.getElementById('tab-login').classList.toggle('active', mode==='login');
+  document.getElementById('tab-register').classList.toggle('active', mode==='register');
+  document.getElementById('auth-title').textContent = mode==='login' ? '作者登录' : '作者注册';
+  document.getElementById('btn-auth').textContent = mode==='login' ? '登 录' : '注 册';
+  document.getElementById('auth-tip').textContent = mode==='login'
+    ? '登录后管理你的小说项目。'
+    : '注册后即可管理你的小说项目。首个注册账号会自动接管本机已有项目。';
+}
+
+async function submitAuth() {
+  const username = document.getElementById('auth-username').value.trim();
+  const password = document.getElementById('auth-password').value;
+  if (!username) { toast('请输入用户名','error'); return; }
+  if (!password) { toast('请输入密码','error'); return; }
+  const btn = document.getElementById('btn-auth');
+  btn.disabled = true; btn.textContent = '⏳ 请稍候...';
+  try {
+    const r = await api(authMode === 'login' ? '/auth/login' : '/auth/register', 'POST', { username, password });
+    localStorage.setItem('token', r.token);
+    localStorage.setItem('user', JSON.stringify(r.user));
+    updateAuthUI();
+    closeModal('modal-auth');
+    toast((authMode === 'register' ? '注册成功，欢迎 ' : '欢迎回来，') + r.user.username, 'success');
+    if (document.getElementById('page-projects').classList.contains('active')) loadProjects();
+  } catch(e) { toast(e.message,'error'); }
+  btn.disabled = false; btn.textContent = authMode === 'login' ? '登 录' : '注 册';
+}
+
+function logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  updateAuthUI();
+  toast('已退出登录','success');
+  navigate('skills');
+}
+
+// 页面加载时校验登录态
+async function initAuth() {
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      const user = await fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
+        .then(r => r.ok ? r.json() : null);
+      if (user) { localStorage.setItem('user', JSON.stringify(user)); }
+      else { localStorage.removeItem('token'); localStorage.removeItem('user'); }
+    } catch(e) { /* 网络异常时保留本地状态 */ }
+  }
+  updateAuthUI();
+  if (!localStorage.getItem('token')) {
+    // 未登录时先落在公开页（技能库），点「我的小说」再引导登录
+    navigate('skills');
+    const h = location.hash.replace('#','');
+    if (h === 'skills' || h === 'knowledge') navigate(h);
+  }
+}
+
+// ============ 初始化 ============
+function init() {
+  updateAuthUI();
+  initAuth();
+  const h = location.hash.replace('#','');
+  if (h === 'skills' || h === 'knowledge') navigate(h);
+}
+init();
+</script>
+</body>
+</html>
