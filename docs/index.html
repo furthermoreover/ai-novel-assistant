@@ -4,134 +4,526 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI 小说创作助手 · 让 AI 记住你的故事</title>
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
 <style>
-  :root{
-    --bg:#0b0e14; --bg2:#11151f; --card:#141927; --card2:#0f1320;
-    --border:#232b3d; --text:#e6e9f2; --muted:#8b93a7;
-    --primary:#6366f1; --primary2:#a78bfa; --accent:#22d3ee;
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'PingFang SC','Microsoft YaHei',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
-  a{color:var(--primary2);text-decoration:none}
-  /* Hero */
-  .hero{text-align:center;padding:80px 24px 60px;background:radial-gradient(ellipse at top,rgba(99,102,241,.18),transparent 60%)}
-  .logo{font-size:52px;margin-bottom:16px}
-  .hero h1{font-size:42px;font-weight:800;background:linear-gradient(90deg,#a5b4fc,#a78bfa,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-  .hero .sub{color:var(--muted);font-size:17px;margin-top:14px;max-width:640px;margin-inline:auto}
-  .badges{margin-top:24px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-  .badge{background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);color:#a5b4fc;border-radius:999px;padding:5px 16px;font-size:13px}
-  .btn{display:inline-block;margin-top:28px;background:linear-gradient(90deg,#6366f1,#8b5cf6);color:#fff;padding:12px 30px;border-radius:10px;font-weight:600;font-size:15px;transition:.2s}
-  .btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(99,102,241,.4)}
-  /* Sections */
-  section{padding:56px 0}
-  section h2{font-size:26px;font-weight:700;margin-bottom:10px}
-  section .lead{color:var(--muted);margin-bottom:32px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:26px;transition:.2s}
-  .card:hover{transform:translateY(-4px);border-color:var(--primary)}
-  .card .ico{font-size:30px;margin-bottom:12px}
-  .card h3{font-size:17px;margin-bottom:8px}
-  .card p{color:var(--muted);font-size:14px}
-  /* Pipeline */
-  .pipeline{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
-  .step{flex:1;min-width:180px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;position:relative}
-  .step .n{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;width:22px;height:22px;border-radius:50%;font-size:12px;line-height:22px}
-  .step .s-ico{font-size:26px;margin-bottom:8px}
-  .step h4{font-size:14px;margin-bottom:6px}
-  .step p{font-size:12px;color:var(--muted)}
-  /* Arch */
-  .arch{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
-  .arch .box{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:18px}
-  .arch .box h4{font-size:14px;color:var(--primary2);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:8px}
-  .arch .box ul{list-style:none;font-size:13px;color:var(--muted)}
-  .arch .box li{padding:4px 0}
-  /* Quickstart */
-  code{background:#1a2133;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:13px;color:#a5b4fc}
-  pre{background:#0d1117;border:1px solid var(--border);border-radius:12px;padding:18px;overflow-x:auto;font-size:13px;color:#c9d1d9;line-height:1.8;margin-top:12px}
-  pre code{background:none;border:none;padding:0;color:inherit}
-  ol.steps{margin:16px 0 0 20px;color:var(--muted);font-size:14px}
-  ol.steps li{padding:5px 0}
-  footer{text-align:center;color:var(--muted);font-size:13px;padding:40px 24px;border-top:1px solid var(--border)}
+/* ============ 设计令牌 ============ */
+:root{
+  --ink:#0c0e12;        /* 墨底 */
+  --ink2:#11141a;       /* 次级墨底 */
+  --ink3:#171b23;       /* 代码块底 */
+  --paper:#efe9d8;      /* 宣纸暖白（标题） */
+  --text:#b9b3a4;       /* 正文纸色 */
+  --dim:#7d776a;        /* 次要文字 */
+  --cinnabar:#c8483c;   /* 朱砂（唯一强调） */
+  --cinnabar-soft:rgba(200,72,60,.14);
+  --jade:#5c9c8c;       /* 玉青（支撑色） */
+  --gold:#c9a24b;       /* 鎏金（签名线/星点） */
+  --hairline:rgba(239,233,216,.12);
+  --serif:"Noto Serif SC",serif,"Songti SC","SimSun";
+  --sans:"Noto Sans SC","Microsoft YaHei",sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--ink);
+  color:var(--text);
+  font-family:var(--sans);
+  font-weight:300;
+  line-height:1.9;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--cinnabar);color:#fff}
+a{color:inherit;text-decoration:none}
+
+/* 背景微纹理：极淡的星点 */
+body::before{
+  content:"";
+  position:fixed;inset:0;z-index:-2;
+  background:
+    radial-gradient(1px 1px at 12% 22%, rgba(201,162,75,.16) 50%, transparent 51%),
+    radial-gradient(1px 1px at 78% 14%, rgba(201,162,75,.12) 50%, transparent 51%),
+    radial-gradient(1px 1px at 34% 68%, rgba(92,156,140,.14) 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 58%, rgba(201,162,75,.12) 50%, transparent 51%),
+    radial-gradient(1px 1px at 55% 82%, rgba(92,156,140,.12) 50%, transparent 51%),
+    radial-gradient(1px 1px at 6% 88%, rgba(239,233,216,.10) 50%, transparent 51%),
+    radial-gradient(1px 1px at 94% 36%, rgba(239,233,216,.10) 50%, transparent 51%);
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 28px;position:relative}
+
+/* ============ 签名元素：鎏金墨线 ============ */
+.inkline{position:fixed;right:26px;top:0;bottom:0;width:2px;z-index:40;pointer-events:none}
+.inkline svg{width:100%;height:100%;display:block}
+.inkline .trace{fill:none;stroke:var(--gold);stroke-width:1.6;stroke-linecap:round;opacity:.55;filter:drop-shadow(0 0 6px rgba(201,162,75,.45))}
+.inkline .head{position:absolute;right:-4px;top:0;width:10px;height:10px;border-radius:50%;background:var(--cinnabar);box-shadow:0 0 12px rgba(200,72,60,.8);transition:top .08s linear}
+
+/* ============ Hero ============ */
+.hero{
+  position:relative;
+  min-height:92vh;
+  display:flex;align-items:center;
+  overflow:hidden;
+}
+.hero-bg{
+  position:absolute;inset:0;z-index:-1;
+  background:url("https://aka.doubaocdn.com/s/KLXFvJrdiV") center/cover no-repeat;
+  opacity:.5;
+  filter:saturate(.85);
+}
+.hero::after{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    linear-gradient(90deg, rgba(12,14,18,.92) 0%, rgba(12,14,18,.55) 45%, rgba(12,14,18,.25) 100%),
+    linear-gradient(0deg, rgba(12,14,18,1) 0%, rgba(12,14,18,0) 32%);
+}
+.hero-inner{padding:96px 0 88px;max-width:820px}
+.kicker{
+  display:inline-flex;align-items:center;gap:12px;
+  font-size:13px;letter-spacing:.35em;color:var(--gold);
+  margin-bottom:34px;
+}
+.kicker::before{content:"";width:44px;height:1px;background:var(--gold);opacity:.6}
+.hero h1{
+  font-family:var(--serif);
+  font-weight:900;
+  font-size:clamp(44px, 7.4vw, 84px);
+  line-height:1.18;
+  color:var(--paper);
+  letter-spacing:.02em;
+  margin-bottom:26px;
+}
+.hero h1 .line{display:block;overflow:hidden}
+.hero h1 .line>span{display:block;transform:translateY(110%);animation:rise .9s cubic-bezier(.22,1,.36,1) forwards}
+.hero h1 .line:nth-child(2)>span{animation-delay:.15s}
+.hero h1 em{
+  font-style:normal;
+  color:transparent;
+  background:linear-gradient(100deg,var(--gold) 10%,var(--paper) 60%,var(--cinnabar) 100%);
+  -webkit-background-clip:text;background-clip:text;
+}
+@keyframes rise{to{transform:none}}
+.hero .sub{
+  font-size:clamp(15px,1.6vw,18px);
+  color:var(--text);
+  max-width:560px;
+  line-height:2;
+  opacity:0;animation:fade .9s ease .45s forwards;
+}
+@keyframes fade{to{opacity:1}}
+.hero-actions{display:flex;align-items:center;gap:22px;margin-top:44px;flex-wrap:wrap;opacity:0;animation:fade .9s ease .65s forwards}
+.btn-cinnabar{
+  display:inline-flex;align-items:center;gap:10px;
+  background:var(--cinnabar);color:#fff;
+  font-family:var(--serif);font-weight:600;font-size:15px;letter-spacing:.12em;
+  padding:14px 34px;border-radius:2px;
+  box-shadow:0 0 0 1px rgba(200,72,60,.5), 0 10px 30px -12px rgba(200,72,60,.55);
+  transition:box-shadow .25s, transform .25s;
+}
+.btn-cinnabar:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(200,72,60,.8), 0 16px 40px -12px rgba(200,72,60,.7)}
+.btn-cinnabar svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.hero-seal{
+  display:flex;align-items:center;gap:10px;
+  font-family:var(--serif);font-size:13px;color:var(--dim);letter-spacing:.2em;
+}
+.hero-seal .stamp{
+  width:44px;height:44px;border:1.6px solid var(--cinnabar);color:var(--cinnabar);
+  display:grid;place-items:center;font-size:11px;line-height:1.2;letter-spacing:.08em;
+  transform:rotate(-3deg);border-radius:2px;
+  background:var(--cinnabar-soft);
+}
+.hero-meta{
+  margin-top:64px;display:flex;gap:0;border-top:1px solid var(--hairline);
+  opacity:0;animation:fade 1s ease .85s forwards;
+}
+.hero-meta .m{flex:1;padding:20px 8px 0 0}
+.hero-meta .m+.m{padding-left:22px;border-left:1px solid var(--hairline)}
+.hero-meta .num{font-family:var(--serif);font-size:26px;font-weight:700;color:var(--paper)}
+.hero-meta .num i{font-style:normal;color:var(--cinnabar);margin-right:2px}
+.hero-meta .lab{font-size:12px;color:var(--dim);letter-spacing:.18em;margin-top:2px}
+
+/* ============ 区块骨架 ============ */
+section{padding:92px 0;position:relative}
+section + section{border-top:1px solid var(--hairline)}
+.sec-head{display:flex;align-items:baseline;gap:18px;margin-bottom:54px}
+.sec-index{
+  font-family:var(--serif);font-size:14px;color:var(--gold);letter-spacing:.3em;
+  writing-mode:vertical-rl;transform:rotate(180deg);
+}
+.sec-title{font-family:var(--serif);font-size:clamp(26px,3.4vw,36px);font-weight:700;color:var(--paper);letter-spacing:.06em}
+.sec-title::after{content:"。";color:var(--cinnabar)}
+.sec-sub{font-size:14px;color:var(--dim);margin-top:8px;max-width:640px}
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .8s ease, transform .8s cubic-bezier(.22,1,.36,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* ============ 核心能力（书页卡片） ============ */
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.pane{
+  background:linear-gradient(160deg, var(--ink2), rgba(17,20,26,.4));
+  border:1px solid var(--hairline);
+  border-top:2px solid rgba(201,162,75,.5);
+  padding:30px 26px 26px;
+  position:relative;
+  transition:border-color .3s, transform .3s;
+}
+.pane:hover{border-color:rgba(200,72,60,.5);transform:translateY(-4px)}
+.pane .dot{position:absolute;top:-5px;left:26px;width:8px;height:8px;background:var(--cinnabar);transform:rotate(45deg)}
+.pane .ico{width:38px;height:38px;margin-bottom:18px}
+.pane .ico svg{width:100%;height:100%;stroke:var(--jade);fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.pane:hover .ico svg{stroke:var(--cinnabar)}
+.pane h3{font-family:var(--serif);font-size:17px;font-weight:700;color:var(--paper);letter-spacing:.08em;margin-bottom:10px}
+.pane p{font-size:13.5px;color:var(--dim);line-height:1.95}
+.pane .tag{display:inline-block;margin-top:16px;font-size:11.5px;color:var(--gold);letter-spacing:.14em;border:1px solid rgba(201,162,75,.35);padding:2px 10px;border-radius:1px}
+
+/* ============ 工作流（轨道） ============ */
+.track{display:flex;gap:0;position:relative}
+.track::before{
+  content:"";position:absolute;top:26px;left:3%;right:3%;height:1px;
+  background:repeating-linear-gradient(90deg, rgba(201,162,75,.4) 0 6px, transparent 6px 14px);
+}
+.step{flex:1;text-align:center;position:relative;padding:0 10px}
+.step .ring{
+  width:52px;height:52px;margin:0 auto 18px;border-radius:50%;
+  border:1px solid rgba(201,162,75,.45);
+  display:grid;place-items:center;
+  font-family:var(--serif);font-size:17px;color:var(--gold);
+  background:var(--ink);position:relative;z-index:1;
+  transition:border-color .3s, color .3s, background .3s;
+}
+.step:hover .ring{border-color:var(--cinnabar);color:#fff;background:var(--cinnabar)}
+.step h4{font-family:var(--serif);font-size:15px;color:var(--paper);letter-spacing:.1em;margin-bottom:6px}
+.step p{font-size:12px;color:var(--dim);line-height:1.8;max-width:150px;margin:0 auto}
+
+/* ============ 技术架构（刻版四栏） ============ */
+.arch{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--hairline);border:1px solid var(--hairline)}
+.arch .box{background:var(--ink2);padding:26px 22px}
+.arch .box h4{
+  font-family:var(--serif);font-size:14px;letter-spacing:.3em;color:var(--paper);
+  padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--hairline);
+}
+.arch .box h4 i{font-style:normal;color:var(--cinnabar);margin-right:8px}
+.arch .box ul{list-style:none}
+.arch .box li{font-size:12.5px;color:var(--dim);padding:5px 0 5px 16px;position:relative;line-height:1.8}
+.arch .box li::before{content:"—";position:absolute;left:0;color:var(--jade)}
+
+/* ============ 快速开始（手记） ============ */
+.quick{display:grid;grid-template-columns:300px 1fr;gap:48px;align-items:start}
+.quick-side{position:sticky;top:40px}
+.quick-side .kicker{letter-spacing:.3em;font-size:12px}
+.quick-side p{font-size:13px;color:var(--dim);margin-top:14px;line-height:2}
+.steps{counter-reset:step;list-style:none}
+.steps li{
+  counter-increment:step;
+  position:relative;
+  padding:0 0 26px 46px;
+  border-left:1px solid var(--hairline);
+  margin-left:11px;
+}
+.steps li::before{
+  content:counter(step, cjk-ideographic);
+  position:absolute;left:-12px;top:-2px;
+  width:24px;height:24px;border-radius:50%;
+  border:1px solid var(--jade);color:var(--jade);
+  display:grid;place-items:center;
+  font-family:var(--serif);font-size:11px;
+  background:var(--ink);
+}
+.steps li:last-child{border-left-color:transparent;padding-bottom:0}
+.steps .t{font-family:var(--serif);font-size:15px;color:var(--paper);letter-spacing:.05em;margin-bottom:4px}
+.steps .d{font-size:13px;color:var(--dim);margin-bottom:8px}
+pre{
+  background:var(--ink3);
+  border:1px solid var(--hairline);
+  border-left:2px solid var(--jade);
+  padding:14px 18px;
+  font-size:12.5px;line-height:1.85;color:#cdd3c8;
+  overflow-x:auto;margin-top:10px;
+  font-family:"Cascadia Code",Consolas,monospace;
+}
+.note{margin-top:26px;font-size:12.5px;color:var(--dim);line-height:2}
+.note code{color:var(--gold);font-family:"Cascadia Code",Consolas,monospace}
+
+/* ============ Footer ============ */
+footer{border-top:1px solid var(--hairline);padding:52px 0 60px}
+.foot-inner{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.foot-brand{display:flex;align-items:center;gap:16px}
+.foot-stamp{
+  width:56px;height:56px;border:1.6px solid var(--cinnabar);color:var(--cinnabar);
+  display:grid;place-items:center;font-family:var(--serif);font-size:12px;line-height:1.25;letter-spacing:.06em;
+  transform:rotate(-3deg);border-radius:2px;background:var(--cinnabar-soft);
+}
+.foot-brand .nm{font-family:var(--serif);font-size:16px;color:var(--paper);letter-spacing:.14em}
+.foot-brand .lg{font-size:11.5px;color:var(--dim);letter-spacing:.1em;margin-top:2px}
+.foot-meta{font-size:12px;color:var(--dim);text-align:right;line-height:2}
+.foot-meta a{color:var(--gold);border-bottom:1px solid rgba(201,162,75,.4)}
+.foot-meta a:hover{color:var(--paper)}
+
+/* ============ 响应式 ============ */
+@media (max-width:960px){
+  .grid-3{grid-template-columns:1fr 1fr}
+  .arch{grid-template-columns:1fr 1fr}
+  .track{flex-direction:column;gap:26px}
+  .track::before{display:none}
+  .step{display:grid;grid-template-columns:52px 1fr;text-align:left;gap:18px;align-items:center}
+  .step .ring{margin:0}
+  .step p{max-width:none}
+  .quick{grid-template-columns:1fr;gap:34px}
+  .quick-side{position:static}
+  .inkline{display:none}
+  .hero-meta .m{min-width:0}
+}
+@media (max-width:600px){
+  .grid-3,.arch{grid-template-columns:1fr}
+  .hero-inner{padding:72px 0 64px}
+  .sec-head{flex-direction:column;align-items:flex-start;gap:8px}
+  section{padding:64px 0}
+}
+
+/* 尊重减弱动效偏好 */
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  .reveal{opacity:1;transform:none}
+  .hero h1 .line>span{transform:none}
+}
 </style>
 </head>
 <body>
 
+<!-- ===== 签名元素：鎏金墨线 ===== -->
+<div class="inkline" id="inkline" aria-hidden="true">
+  <svg viewBox="0 0 2 1200" preserveAspectRatio="none">
+    <path class="trace" id="inktrace" d="M1,0 C3,300 -1,600 1,900 C2,1050 1,1150 1,1200"/>
+  </svg>
+  <div class="head" id="inkhead"></div>
+</div>
+
+<!-- ===== Hero ===== -->
 <header class="hero">
-  <div class="logo">📖</div>
-  <h1>AI 小说创作助手</h1>
-  <p class="sub">一个带 RAG 知识库与自主剧情 Agent 长期记忆的本地网文创作工具 —— AI 记住你的大纲、人物、设定、伏笔与时间线，剧情永不脱轨。</p>
-  <div class="badges">
-    <span class="badge">RAG 知识库</span>
-    <span class="badge">自主剧情 Agent</span>
-    <span class="badge">长期记忆</span>
-    <span class="badge">自动规划章节</span>
-    <span class="badge">作者账号</span>
-    <span class="badge">开源 · MIT</span>
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="wrap hero-inner">
+    <div class="kicker">本地运行 · 数据自有 · 开源 MIT</div>
+    <h1>
+      <span class="line"><span>AI 小说创作助手</span></span>
+      <span class="line"><span>让 AI <em>记住</em>你的故事</span></span>
+    </h1>
+    <p class="sub">大纲、人物、设定、伏笔与剧情时间线，AI 全部记住。自主剧情 Agent 随章节自动更新记忆，写作时注入精简状态包——剧情永不脱轨。</p>
+    <div class="hero-actions">
+      <a class="btn-cinnabar" href="https://github.com/furthermoreover/ai-novel-assistant" target="_blank" rel="noopener">
+        查看源码
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <div class="hero-seal"><span class="stamp">开源<br>MIT</span><span>FurtherMoreOver<br>© 2026</span></div>
+    </div>
+    <div class="hero-meta">
+      <div class="m"><div class="num"><i>壹</i>套记忆</div><div class="lab">大纲·人物·设定·伏笔·时间线</div></div>
+      <div class="m"><div class="num"><i>拾</i>项技能</div><div class="lab">写作技能库·按需注入省 Token</div></div>
+      <div class="m"><div class="num"><i>拾贰</i>卷资料</div><div class="lab">RAG 知识库·玄幻专项在内</div></div>
+      <div class="m"><div class="num"><i>双</i>模型</div><div class="lab">智谱向量 · 千问/智谱写作</div></div>
+    </div>
   </div>
-  <a class="btn" href="https://github.com/furthermoreover/ai-novel-assistant" target="_blank" rel="noopener">查看源码 →</a>
 </header>
 
+<!-- ===== 核心能力 ===== -->
 <section>
   <div class="wrap">
-    <h2>✨ 核心能力</h2>
-    <p class="lead">从灵感到连载，AI 全程记住你的世界。</p>
-    <div class="grid">
-      <div class="card"><div class="ico">📚</div><h3>RAG 知识库</h3><p>内置 12 篇网文写作方法论（黄金三章、爽点节奏、伏笔悬念、玄幻专项…），向量化检索，写作时自动注入相关知识。</p></div>
-      <div class="card"><div class="ico">🧠</div><h3>自主剧情 Agent</h3><p>每分析一章，自动更新人物卡、世界设定、人物关系、伏笔库与剧情时间线，无需手动维护。</p></div>
-      <div class="card"><div class="ico">🧭</div><h3>自动规划下一章</h3><p>基于完整记忆生成下一章大纲与对仗式章节名（如"剑冢将启"），一键按规划新建章节。</p></div>
-      <div class="card"><div class="ico">✍️</div><h3>AI 写作</h3><p>10 个预设写作技能 + 三种记忆注入模式（自动 / 精简状态包 / 完整状态包），省 token 且不丢设定。</p></div>
-      <div class="card"><div class="ico">💾</div><h3>长期记忆</h3><p>所有设定持久化到 PostgreSQL，重启不丢失；单章分析与全量同步带进度条。</p></div>
-      <div class="card"><div class="ico">🔐</div><h3>作者账号</h3><p>注册 / 登录，项目按账号隔离；密码 PBKDF2 加密，登录态 30 天有效。</p></div>
+    <div class="sec-head reveal">
+      <span class="sec-index">能力</span>
+      <div>
+        <div class="sec-title">核心能力</div>
+        <p class="sec-sub">从灵感到连载，AI 全程记住你的世界。</p>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="pane reveal">
+        <span class="dot"></span>
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20"/><path d="M9 8h6M9 12h4"/></svg></div>
+        <h3>RAG 知识库</h3>
+        <p>内置十二卷网文写作方法论：黄金三章、爽点节奏、伏笔悬念、玄幻专项。向量化检索，写作时自动注入相关主题知识。</p>
+        <span class="tag">向量检索</span>
+      </div>
+      <div class="pane reveal">
+        <span class="dot"></span>
+        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></div>
+        <h3>自主剧情 Agent</h3>
+        <p>每分析一章，自动更新人物卡、世界设定、人物关系、伏笔库与剧情时间线，无需手动维护任何设定。</p>
+        <span class="tag">长期记忆</span>
+      </div>
+      <div class="pane reveal">
+        <span class="dot"></span>
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l2.2 4.9 5.3.6-4 3.5 1.1 5.2L12 14.9 7.4 17.2l1.1-5.2-4-3.5 5.3-.6z"/><path d="M3 21h18"/></svg></div>
+        <h3>自动规划下一章</h3>
+        <p>基于完整记忆生成下一章大纲与对仗式章节名（如「剑冢将启」），一键按规划新建章节，续写不断档。</p>
+        <span class="tag">章节规划</span>
+      </div>
+      <div class="pane reveal">
+        <span class="dot"></span>
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 20c6-1 12-5 15-13-3 1-5 2-7 3-1 2-2 5-2 8-4-1-5-2-6 2z"/><path d="M12 10c2-2 5-4 8-5"/></svg></div>
+        <h3>AI 写作</h3>
+        <p>十项预设写作技能，三种记忆注入模式：自动、精简状态包、完整状态包——省 Token 且不丢设定。</p>
+        <span class="tag">技能驱动</span>
+      </div>
+      <div class="pane reveal">
+        <span class="dot"></span>
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg></div>
+        <h3>长期记忆</h3>
+        <p>所有设定持久化到 PostgreSQL，重启不丢失。单章分析与全量同步都带进度条，记忆库一目了然。</p>
+        <span class="tag">持久化</span>
+      </div>
+      <div class="pane reveal">
+        <span class="dot"></span>
+        <div class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1.4" fill="currentColor" stroke="none"/></svg></div>
+        <h3>作者账号</h3>
+        <p>注册 / 登录，项目按账号隔离。密码 PBKDF2 加密、登录态三十天有效，首个注册账号自动接管本机项目。</p>
+        <span class="tag">数据隔离</span>
+      </div>
     </div>
   </div>
 </section>
 
-<section style="background:var(--bg2)">
-  <div class="wrap">
-    <h2>🔁 创作工作流</h2>
-    <p class="lead">写入 → 记忆 → 规划 → 再写入，形成自我强化的创作闭环。</p>
-    <div class="pipeline">
-      <div class="step"><span class="n">1</span><div class="s-ico">📝</div><h4>撰写 / 导入章节</h4><p>粘贴或按 AI 规划生成正文</p></div>
-      <div class="step"><span class="n">2</span><div class="s-ico">🧠</div><h4>Agent 分析本章</h4><p>抽取人物 / 设定 / 关系 / 伏笔</p></div>
-      <div class="step"><span class="n">3</span><div class="s-ico">🗄️</div><h4>写入长期记忆</h4><p>人物卡、时间线、伏笔库自动更新</p></div>
-      <div class="step"><span class="n">4</span><div class="s-ico">🧭</div><h4>规划下一章</h4><p>基于记忆生成大纲与章节名</p></div>
-      <div class="step"><span class="n">5</span><div class="s-ico">✍️</div><h4>注入状态包写作</h4><p>精简状态包保证设定不脱轨</p></div>
-    </div>
-  </div>
-</section>
-
+<!-- ===== 创作工作流 ===== -->
 <section>
   <div class="wrap">
-    <h2>🧱 技术架构</h2>
-    <p class="lead">本地优先 · 数据自有 · 密钥安全。</p>
-    <div class="arch">
-      <div class="box"><h4>前端</h4><ul><li>原生 HTML / CSS / JS</li><li>单文件应用，无构建</li><li>工作台：人物 · 章节 · AI 写作 · Agent 助手</li></ul></div>
-      <div class="box"><h4>后端</h4><ul><li>Python 3.10+ / FastAPI</li><li>psycopg3 / uvicorn</li><li>PBKDF2 + HMAC Token 认证</li></ul></div>
-      <div class="box"><h4>数据库</h4><ul><li>PostgreSQL 18 + pgvector</li><li>人物卡 / 章节 / 大纲</li><li>时间线 / 关系图 / 伏笔库</li></ul></div>
-      <div class="box"><h4>LLM</h4><ul><li>智谱 embedding-3（向量化）</li><li>千问 / 智谱 写作模型（可切换）</li><li>API Key 存于本地 .env</li></ul></div>
+    <div class="sec-head reveal">
+      <span class="sec-index">流程</span>
+      <div>
+        <div class="sec-title">创作工作流</div>
+        <p class="sec-sub">写入 → 记忆 → 规划 → 再写入，一条自我强化的创作闭环。</p>
+      </div>
+    </div>
+    <div class="track">
+      <div class="step reveal"><div class="ring">一</div><h4>撰写 / 导入</h4><p>粘贴章节或按 AI 规划生成正文</p></div>
+      <div class="step reveal"><div class="ring">二</div><h4>Agent 分析</h4><p>抽取人物·设定·关系·伏笔</p></div>
+      <div class="step reveal"><div class="ring">三</div><h4>写入记忆</h4><p>人物卡·时间线·伏笔库自动更新</p></div>
+      <div class="step reveal"><div class="ring">四</div><h4>规划下一章</h4><p>基于记忆生成大纲与章节名</p></div>
+      <div class="step reveal"><div class="ring">五</div><h4>状态包写作</h4><p>注入精简状态包，设定不脱轨</p></div>
     </div>
   </div>
 </section>
 
-<section style="background:var(--bg2)">
+<!-- ===== 技术架构 ===== -->
+<section>
   <div class="wrap">
-    <h2>🚀 快速开始</h2>
-    <p class="lead">本地运行，5 分钟跑起来。</p>
-    <ol class="steps">
-      <li>准备 <code>Python 3.10+</code>、<code>PostgreSQL 18</code>（含 pgvector）、智谱 API Key</li>
-      <li>克隆仓库：<code>git clone https://github.com/furthermoreover/ai-novel-assistant.git</code></li>
-      <li>复制 <code>.env.example</code> 为 <code>.env</code> 并填入密钥</li>
-      <li>Windows 双击 <code>start.bat</code> 一键启动；或 <code>python -m uvicorn backend.main:app --port 8000</code></li>
-      <li>浏览器打开 <code>http://127.0.0.1:8000</code>，注册账号开始创作</li>
-    </ol>
-    <p style="color:var(--muted);font-size:13px;margin-top:18px">详细说明见仓库 <a href="https://github.com/furthermoreover/ai-novel-assistant#readme" target="_blank" rel="noopener">README</a>。⚠️ 请勿将 <code>.env</code> 提交到仓库，密钥永不公开。</p>
+    <div class="sec-head reveal">
+      <span class="sec-index">架构</span>
+      <div>
+        <div class="sec-title">技术架构</div>
+        <p class="sec-sub">本地优先 · 数据自有 · 密钥安全。</p>
+      </div>
+    </div>
+    <div class="arch reveal">
+      <div class="box"><h4><i>壹</i>前端</h4><ul><li>原生 HTML / CSS / JS</li><li>单文件应用，无构建</li><li>人物·章节·写作·Agent 工作台</li></ul></div>
+      <div class="box"><h4><i>贰</i>后端</h4><ul><li>Python 3.10+ / FastAPI</li><li>psycopg3 / uvicorn</li><li>PBKDF2 + HMAC Token 认证</li></ul></div>
+      <div class="box"><h4><i>叁</i>数据库</h4><ul><li>PostgreSQL 18 + pgvector</li><li>人物卡 / 章节 / 大纲</li><li>时间线 / 关系图 / 伏笔库</li></ul></div>
+      <div class="box"><h4><i>肆</i>模型</h4><ul><li>智谱 embedding-3 向量化</li><li>千问 / 智谱 写作模型可切换</li><li>API Key 存于本地 .env</li></ul></div>
+    </div>
   </div>
 </section>
 
+<!-- ===== 快速开始 ===== -->
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-index">开卷</span>
+      <div>
+        <div class="sec-title">快速开始</div>
+        <p class="sec-sub">本地运行，五步开卷。</p>
+      </div>
+    </div>
+    <div class="quick">
+      <div class="quick-side reveal">
+        <div class="kicker">前置</div>
+        <p>准备 <code>Python 3.10+</code>、<code>PostgreSQL 18</code>（含 pgvector）、智谱 API Key。克隆仓库后复制 <code>.env.example</code> 为 <code>.env</code> 并填入密钥，双击 <code>start.bat</code> 一键启动。</p>
+      </div>
+      <ol class="steps">
+        <li class="reveal">
+          <div class="t">克隆仓库</div>
+          <div class="d">拉取源码到本地</div>
+          <pre>git clone https://github.com/furthermoreover/ai-novel-assistant.git<br>cd ai-novel-assistant</pre>
+        </li>
+        <li class="reveal">
+          <div class="t">创建数据库</div>
+          <div class="d">本机 PostgreSQL，默认端口 5432</div>
+          <pre>psql -U postgres -c "CREATE DATABASE novel_assistant;"<br>psql -U postgres -d novel_assistant -c "CREATE EXTENSION IF NOT EXISTS vector;"</pre>
+        </li>
+        <li class="reveal">
+          <div class="t">配置密钥</div>
+          <div class="d">复制模板并填入你的 API Key 与数据库密码</div>
+          <pre>cp .env.example .env</pre>
+        </li>
+        <li class="reveal">
+          <div class="t">安装依赖</div>
+          <div class="d">项目内虚拟环境，自包含可复现</div>
+          <pre>python -m venv .venv<br>.venv\Scripts\pip install -r requirements.txt</pre>
+        </li>
+        <li class="reveal">
+          <div class="t">启动</div>
+          <div class="d">Windows 双击 start.bat，或手动拉起服务</div>
+          <pre>.venv\Scripts\python -m uvicorn backend.main:app --port 8000<br># 浏览器打开 http://127.0.0.1:8000</pre>
+        </li>
+      </ol>
+    </div>
+    <p class="note reveal">首次启动自动导入 <code>knowledge_base/</code> 知识库并向量化（需智谱 Key）。详细说明见仓库 <a href="https://github.com/furthermoreover/ai-novel-assistant#readme" target="_blank" rel="noopener">README</a>。注意：<code>.env</code> 含密钥，已被 .gitignore 排除，请勿提交。</p>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
 <footer>
-  <p>AI 小说创作助手 · MIT License · 用 ❤️ 和 🐍 构建</p>
+  <div class="wrap foot-inner">
+    <div class="foot-brand">
+      <div class="foot-stamp">助<br>手</div>
+      <div>
+        <div class="nm">AI 小说创作助手</div>
+        <div class="lg">RAG 知识库 · 自主剧情 Agent · 长期记忆</div>
+      </div>
+    </div>
+    <div class="foot-meta">
+      MIT License · © 2026 FurthermoreOver<br>
+      <a href="https://github.com/furthermoreover/ai-novel-assistant" target="_blank" rel="noopener">GitHub 仓库</a>
+    </div>
+  </div>
 </footer>
 
+<script>
+// ============ 鎏金墨线：随滚动推进 ============
+(function(){
+  var line = document.getElementById('inkline');
+  if (!line) return;
+  var path = document.getElementById('inktrace');
+  var head = document.getElementById('inkhead');
+  var len = path.getTotalLength();
+  path.style.strokeDasharray = len;
+  path.style.strokeDashoffset = len;
+
+  function paint(){
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - window.innerHeight;
+    var p = max > 0 ? (window.scrollY / max) : 0;
+    var offset = len * (1 - p);
+    path.style.strokeDashoffset = offset;
+    head.style.top = (p * (window.innerHeight - 12)) + 'px';
+  }
+  window.addEventListener('scroll', paint, {passive:true});
+  window.addEventListener('resize', paint);
+  paint();
+})();
+
+// ============ 滚动渐入 ============
+(function(){
+  var items = document.querySelectorAll('.reveal');
+  if (!('IntersectionObserver' in window)) {
+    items.forEach(function(el){ el.classList.add('in'); });
+    return;
+  }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (en.isIntersecting) {
+        en.target.classList.add('in');
+        io.unobserve(en.target);
+      }
+    });
+  }, {threshold:.12, rootMargin:'0px 0px -40px 0px'});
+  items.forEach(function(el){ io.observe(el); });
+})();
+</script>
 </body>
 </html>
