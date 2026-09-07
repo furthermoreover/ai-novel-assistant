@@ -5,164 +5,318 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <title>AI 小说创作助手</title>
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
 <style>
-:root {
-  --bg: #0f1117; --card: #1a1d27; --card2: #222634; --border: #2c3040;
-  --text: #e8eaf0; --muted: #8b91a3; --primary: #6366f1; --primary2: #8b5cf6;
-  --success: #22c55e; --warn: #f59e0b; --danger: #ef4444;
+/* ============ 设计令牌：墨色书卷 × 玄幻星海 ============ */
+:root{
+  --bg:#0c0e12; --card:#11141a; --card2:#161a22; --card3:#1b202a;
+  --border:rgba(239,233,216,.12); --border-soft:rgba(239,233,216,.07);
+  --paper:#efe9d8; --text:#e4dfd0; --muted:#98917f; --dim:#6f6a5c;
+  --cinnabar:#c8483c; --cinnabar-2:#a83a30; --cinnabar-soft:rgba(200,72,60,.14);
+  --jade:#5c9c8c; --jade-soft:rgba(92,156,140,.14);
+  --gold:#c9a24b; --gold-soft:rgba(201,162,75,.16);
+  --success:#4f9d74; --warn:#c9a24b; --danger:#c8483c;
+  --serif:"Noto Serif SC","Songti SC","SimSun",serif;
+  --sans:"Noto Sans SC","Microsoft YaHei","PingFang SC",sans-serif;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:var(--bg); color:var(--text); font-family:"Microsoft YaHei","PingFang SC",sans-serif; min-height:100vh; }
-a { color:inherit; text-decoration:none; }
-button { cursor:pointer; border:none; background:none; color:inherit; font:inherit; }
-input, textarea, select { background:var(--card2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 12px; font:inherit; outline:none; }
-input:focus, textarea:focus, select:focus { border-color:var(--primary); }
-textarea { resize:vertical; line-height:1.6; }
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:300;
+  min-height:100vh;line-height:1.7;overflow-x:hidden;-webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(1px 1px at 15% 20%, rgba(201,162,75,.10) 50%, transparent 51%),
+    radial-gradient(1px 1px at 80% 10%, rgba(201,162,75,.08) 50%, transparent 51%),
+    radial-gradient(1px 1px at 30% 75%, rgba(92,156,140,.09) 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 60%, rgba(201,162,75,.08) 50%, transparent 51%),
+    radial-gradient(1px 1px at 55% 90%, rgba(92,156,140,.07) 50%, transparent 51%);
+}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;border:none;background:none;color:inherit;font:inherit}
+input,textarea,select{
+  background:var(--card2);border:1px solid var(--border);color:var(--text);
+  border-radius:6px;padding:9px 13px;font:inherit;outline:none;transition:border-color .2s, box-shadow .2s;
+}
+input::placeholder,textarea::placeholder{color:var(--dim)}
+input:focus,textarea:focus,select:focus{border-color:var(--jade);box-shadow:0 0 0 3px var(--jade-soft)}
+textarea{resize:vertical;line-height:1.7}
+select{cursor:pointer}
+::selection{background:var(--cinnabar);color:#fff}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--card3);border-radius:5px;border:2px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:var(--cinnabar)}
 
-/* 顶部导航 */
-.navbar { display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:50; }
-.nav-brand { display:flex; align-items:center; gap:10px; font-size:18px; font-weight:700; }
-.nav-brand .logo { width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,var(--primary),var(--primary2)); display:flex; align-items:center; justify-content:center; font-size:18px; }
-.nav-links { display:flex; gap:6px; }
-.nav-link { padding:8px 16px; border-radius:8px; font-size:14px; color:var(--muted); transition:.2s; }
-.nav-link:hover { color:var(--text); background:var(--card2); }
-.nav-link.active { color:#fff; background:var(--primary); }
+/* 通用图标 */
+.ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.14em}
 
-/* 页面容器 */
-.page { max-width:1200px; margin:0 auto; padding:24px; display:none; }
-.page.active { display:block; }
+/* ============ 顶部导航 ============ */
+.navbar{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:12px 26px;background:rgba(12,14,18,.85);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;
+}
+.nav-brand{display:flex;align-items:center;gap:12px;font-family:var(--serif);font-size:17px;font-weight:700;letter-spacing:.06em;color:var(--paper)}
+.nav-brand .seal{
+  width:36px;height:36px;border-radius:5px;flex-shrink:0;
+  background:var(--cinnabar);color:#fff;display:grid;place-items:center;
+  font-family:var(--serif);font-size:17px;font-weight:900;
+  box-shadow:0 4px 14px -4px rgba(200,72,60,.6);transform:rotate(-2deg);
+}
+.nav-brand .seal svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-links{display:flex;gap:4px}
+.nav-link{
+  position:relative;padding:8px 16px;border-radius:6px;font-size:14px;color:var(--muted);transition:.2s;letter-spacing:.04em;
+}
+.nav-link:hover{color:var(--text);background:var(--card2)}
+.nav-link.active{color:var(--paper);background:linear-gradient(180deg,rgba(200,72,60,.16),rgba(200,72,60,.06));}
+.nav-link.active::after{
+  content:"";position:absolute;left:16px;right:16px;bottom:4px;height:2px;
+  background:var(--cinnabar);border-radius:1px;
+}
+.nav-auth{display:flex;gap:8px;align-items:center}
+.nav-auth .user-chip{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.nav-auth .user-chip .avatar{
+  width:26px;height:26px;border-radius:50%;border:1px solid var(--gold);
+  display:grid;place-items:center;font-family:var(--serif);font-size:12px;color:var(--gold);
+}
 
-/* 卡片 */
-.card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px; margin-bottom:16px; }
-.card-title { font-size:16px; font-weight:600; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
-.card-title .icon { font-size:18px; }
+/* ============ 页面容器 ============ */
+.page{max-width:1180px;margin:0 auto;padding:28px 26px 60px;display:none}
+.page.active{display:block}
+h2.page-title{font-family:var(--serif);font-size:26px;font-weight:700;color:var(--paper);letter-spacing:.05em;margin-bottom:6px}
+h2.page-title::after{content:"。";color:var(--cinnabar)}
+p.page-sub{color:var(--muted);font-size:14px;margin-bottom:26px;line-height:1.9}
 
-/* 按钮 */
-.btn { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:9px; font-size:14px; font-weight:500; transition:.2s; border:1px solid transparent; }
-.btn-primary { background:var(--primary); color:#fff; }
-.btn-primary:hover { background:#4f52e0; }
-.btn-outline { background:transparent; border-color:var(--border); color:var(--text); }
-.btn-outline:hover { border-color:var(--primary); color:#a5b4fc; }
-.btn-danger { background:transparent; border-color:var(--danger); color:var(--danger); }
-.btn-danger:hover { background:var(--danger); color:#fff; }
-.btn-sm { padding:5px 12px; font-size:13px; }
-.btn:disabled { opacity:.5; cursor:not-allowed; }
+/* ============ 卡片 ============ */
+.card{
+  position:relative;background:linear-gradient(170deg,var(--card),rgba(17,20,26,.5));
+  border:1px solid var(--border);border-top:2px solid rgba(201,162,75,.45);
+  border-radius:8px;padding:20px 22px;margin-bottom:16px;transition:border-color .25s;
+}
+.card:hover{border-color:rgba(200,72,60,.35)}
+.card-title{font-family:var(--serif);font-size:16px;font-weight:700;color:var(--paper);margin-bottom:14px;display:flex;align-items:center;gap:9px;letter-spacing:.04em}
+.card-title .icon{
+  width:26px;height:26px;border-radius:6px;background:var(--cinnabar-soft);border:1px solid rgba(200,72,60,.3);
+  display:grid;place-items:center;color:var(--cinnabar);font-size:15px;flex-shrink:0;
+}
+.card-title .icon .ic{width:15px;height:15px}
 
-/* 表单 */
-.form-row { display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
-.form-row > * { flex:1; min-width:180px; }
-label { font-size:13px; color:var(--muted); display:block; margin-bottom:6px; }
+/* ============ 按钮 ============ */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:6px;
+  font-size:14px;font-weight:400;letter-spacing:.05em;transition:.2s;border:1px solid transparent;white-space:nowrap;
+}
+.btn .ic{width:14px;height:14px}
+.btn-primary{background:var(--cinnabar);color:#fff;box-shadow:0 6px 18px -8px rgba(200,72,60,.55)}
+.btn-primary:hover{background:var(--cinnabar-2);transform:translateY(-1px);box-shadow:0 10px 22px -8px rgba(200,72,60,.65)}
+.btn-outline{background:transparent;border-color:var(--border);color:var(--text)}
+.btn-outline:hover{border-color:var(--jade);color:var(--jade);background:var(--jade-soft)}
+.btn-danger{background:transparent;border-color:rgba(200,72,60,.45);color:var(--danger)}
+.btn-danger:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
+.btn-sm{padding:5px 12px;font-size:13px;border-radius:5px}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
 
-/* 列表 */
-.list-item { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; transition:.2s; }
-.list-item:hover { border-color:var(--primary); }
-.item-main { flex:1; min-width:0; }
-.item-title { font-size:15px; font-weight:600; margin-bottom:4px; }
-.item-sub { font-size:13px; color:var(--muted); }
-.item-actions { display:flex; gap:8px; flex-shrink:0; }
+/* ============ 表单 ============ */
+.form-row{display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.form-row > *{flex:1;min-width:180px}
+label{font-size:12.5px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.06em}
 
-/* 标签页 */
-.tabs { display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:20px; flex-wrap:wrap; }
-.tab { padding:10px 20px; font-size:14px; color:var(--muted); border-bottom:2px solid transparent; transition:.2s; }
-.tab:hover { color:var(--text); }
-.tab.active { color:#a5b4fc; border-bottom-color:var(--primary); }
+/* ============ 列表 ============ */
+.list-item{
+  position:relative;background:var(--card2);border:1px solid var(--border-soft);
+  border-radius:8px;padding:14px 16px;margin-bottom:10px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;transition:.2s;
+}
+.list-item::before{
+  content:"";position:absolute;left:0;top:12px;bottom:12px;width:2px;
+  background:transparent;border-radius:1px;transition:.2s;
+}
+.list-item:hover{border-color:rgba(200,72,60,.4);background:var(--card3)}
+.list-item:hover::before{background:var(--cinnabar)}
+.item-main{flex:1;min-width:0}
+.item-title{font-family:var(--serif);font-size:15px;font-weight:600;color:var(--paper);margin-bottom:4px;letter-spacing:.03em}
+.item-sub{font-size:13px;color:var(--muted);line-height:1.7}
+.item-actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap}
 
-/* 网格 */
-.grid { display:grid; gap:16px; }
-.grid-2 { grid-template-columns:1fr 1fr; }
-.grid-3 { grid-template-columns:repeat(3,1fr); }
-@media (max-width:900px){ .grid-2,.grid-3{ grid-template-columns:1fr; } }
+/* ============ 标签页 ============ */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:24px;flex-wrap:wrap}
+.tab{
+  position:relative;padding:11px 22px;font-size:14px;color:var(--muted);
+  border-bottom:2px solid transparent;transition:.2s;letter-spacing:.08em;font-family:var(--serif);
+}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--cinnabar);border-bottom-color:var(--cinnabar);font-weight:700}
 
-/* 徽章 */
-.badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:12px; background:var(--card2); border:1px solid var(--border); color:var(--muted); }
-.badge-primary { background:rgba(99,102,241,.15); border-color:rgba(99,102,241,.4); color:#a5b4fc; }
-.badge-success { background:rgba(34,197,94,.12); border-color:rgba(34,197,94,.35); color:#4ade80; }
+/* ============ 网格 ============ */
+.grid{display:grid;gap:16px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+@media (max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}}
 
-/* 技能卡 */
-.skill-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; transition:.2s; cursor:pointer; }
-.skill-card:hover { border-color:var(--primary); transform:translateY(-2px); }
-.skill-icon { font-size:28px; margin-bottom:10px; }
-.skill-name { font-size:15px; font-weight:600; margin-bottom:6px; }
-.skill-desc { font-size:13px; color:var(--muted); line-height:1.6; }
-.skill-tags { margin-top:10px; display:flex; gap:6px; flex-wrap:wrap; }
+/* ============ 徽章 ============ */
+.badge{
+  display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:3px;
+  font-size:12px;background:var(--card3);border:1px solid var(--border);color:var(--muted);letter-spacing:.03em;
+}
+.badge-primary{background:var(--gold-soft);border-color:rgba(201,162,75,.35);color:var(--gold)}
+.badge-success{background:rgba(79,157,116,.13);border-color:rgba(79,157,116,.35);color:#7cc4a0}
+.badge-danger{background:var(--cinnabar-soft);border-color:rgba(200,72,60,.35);color:#e08a80}
 
-/* 知识块 */
-.kb-item { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:10px; }
-.kb-item h4 { font-size:14px; margin-bottom:8px; color:#a5b4fc; }
-.kb-item p { font-size:13px; color:var(--muted); line-height:1.7; white-space:pre-wrap; max-height:120px; overflow:hidden; }
-.kb-item.expanded p { max-height:none; }
-.kb-meta { margin-top:8px; font-size:12px; color:#5b6172; }
+/* ============ 技能卡 ============ */
+.skill-card{
+  position:relative;background:linear-gradient(170deg,var(--card),rgba(17,20,26,.5));
+  border:1px solid var(--border);border-top:2px solid rgba(201,162,75,.45);
+  border-radius:8px;padding:20px;transition:.25s;cursor:pointer;overflow:hidden;
+}
+.skill-card::after{
+  content:"";position:absolute;right:-30px;top:-30px;width:80px;height:80px;border-radius:50%;
+  background:radial-gradient(circle,rgba(200,72,60,.08),transparent 70%);
+}
+.skill-card:hover{border-color:var(--cinnabar);transform:translateY(-3px)}
+.skill-icon{
+  width:42px;height:42px;border-radius:8px;margin-bottom:14px;
+  background:var(--cinnabar-soft);border:1px solid rgba(200,72,60,.3);
+  display:grid;place-items:center;color:var(--cinnabar);
+}
+.skill-icon .ic{width:22px;height:22px}
+.skill-name{font-family:var(--serif);font-size:15px;font-weight:700;color:var(--paper);margin-bottom:6px;letter-spacing:.04em}
+.skill-desc{font-size:13px;color:var(--muted);line-height:1.7}
+.skill-tags{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
 
-/* 写作区（上下布局） */
-.write-layout { display:grid; grid-template-columns:1fr; gap:16px; }
-.write-input, .write-output { min-height:200px; }
-.write-output { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:16px; font-size:14px; line-height:1.9; white-space:pre-wrap; overflow-y:auto; max-height:480px; }
+/* ============ 知识块 ============ */
+.kb-item{background:var(--card2);border:1px solid var(--border-soft);border-left:2px solid var(--jade);border-radius:6px;padding:14px 16px;margin-bottom:10px;transition:.2s}
+.kb-item:hover{border-left-color:var(--cinnabar)}
+.kb-item h4{font-family:var(--serif);font-size:14px;margin-bottom:8px;color:var(--gold)}
+.kb-item p{font-size:13px;color:var(--muted);line-height:1.8;white-space:pre-wrap;max-height:120px;overflow:hidden}
+.kb-item.expanded p{max-height:none}
+.kb-meta{margin-top:8px;font-size:12px;color:var(--dim)}
+.section-label{font-family:var(--serif);font-size:12px;font-weight:700;color:var(--jade);letter-spacing:.2em;margin:22px 0 10px}
 
-/* 下一章规划卡片 */
-.plan-card { margin-top:14px; border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--card); }
-.plan-card-head { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:linear-gradient(135deg,rgba(99,102,241,.18),rgba(139,92,246,.10)); border-bottom:1px solid var(--border); }
-.plan-card-title { font-size:15px; font-weight:600; color:#a5b4fc; display:flex; align-items:center; gap:8px; }
-.plan-card-title::before { content:'🧭'; }
-.plan-card-body { padding:16px 18px; font-size:14px; line-height:2; white-space:pre-wrap; color:var(--text); background:var(--card2); max-height:440px; overflow-y:auto; }
-.plan-btn { font-size:12px; padding:6px 12px; }
+/* ============ 写作区 ============ */
+.write-layout{display:grid;grid-template-columns:1fr;gap:18px}
+.write-input,.write-output{min-height:200px}
+.write-output{
+  background:var(--card2);border:1px solid var(--border);border-top:2px solid rgba(92,156,140,.5);
+  border-radius:8px;padding:18px 20px;font-size:14px;line-height:2;white-space:pre-wrap;overflow-y:auto;max-height:520px;
+}
 
-/* 工具条 */
-.toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
-.toolbar .spacer { flex:1; }
+/* ============ 规划卡片 ============ */
+.plan-card{margin-top:16px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--card);display:none}
+.plan-card.show{display:block}
+.plan-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:13px 18px;background:var(--gold-soft);border-bottom:1px solid var(--border)}
+.plan-card-title{font-family:var(--serif);font-size:15px;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:8px}
+.plan-card-title .ic{width:16px;height:16px}
+.plan-card-body{padding:16px 20px;font-size:14px;line-height:2.1;white-space:pre-wrap;color:var(--text);background:var(--card2);max-height:460px;overflow-y:auto}
+.plan-btn{font-size:12.5px;padding:5px 12px}
 
-/* 弹窗 */
-.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:100; }
-.modal-overlay.show { display:flex; }
-.nav-auth { display:flex; gap:8px; align-items:center; }
-.nav-auth .user-chip { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); }
-.auth-tabs { display:flex; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:3px; margin-bottom:14px; }
-.auth-tab { flex:1; padding:8px 0; border:none; background:transparent; color:var(--muted); cursor:pointer; font-size:14px; border-radius:6px; transition:.2s; }
-.auth-tab.active { background:var(--primary); color:#fff; }
-.auth-tip { font-size:12px; color:var(--muted); margin:8px 0 0; line-height:1.7; }
-.modal { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; width:90%; max-width:560px; max-height:85vh; overflow-y:auto; }
-.modal h3 { margin-bottom:16px; font-size:17px; }
-.modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+/* ============ 工具条 ============ */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+.toolbar .spacer{flex:1}
 
-/* 提示 */
-.toast { position:fixed; top:20px; right:20px; z-index:200; display:flex; flex-direction:column; gap:8px; }
-.toast-item { background:var(--card); border:1px solid var(--border); border-left:4px solid var(--primary); padding:12px 18px; border-radius:10px; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,.4); animation:slideIn .3s; }
-.toast-item.success { border-left-color:var(--success); }
-.toast-item.error { border-left-color:var(--danger); }
-@keyframes slideIn { from{ transform:translateX(100%); opacity:0; } to{ transform:none; opacity:1; } }
+/* ============ 弹窗 ============ */
+.modal-overlay{position:fixed;inset:0;background:rgba(8,10,13,.7);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal-overlay.show{display:flex;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{
+  position:relative;background:linear-gradient(175deg,var(--card),var(--bg));
+  border:1px solid var(--border);border-top:2px solid rgba(201,162,75,.55);
+  border-radius:10px;padding:26px 28px;width:90%;max-width:560px;max-height:86vh;overflow-y:auto;
+  box-shadow:0 30px 80px -20px rgba(0,0,0,.7);
+}
+.modal h3{font-family:var(--serif);font-size:18px;font-weight:700;color:var(--paper);letter-spacing:.06em;margin-bottom:18px}
+.modal h3::after{content:"。";color:var(--cinnabar)}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;flex-wrap:wrap}
+.auth-tabs{display:flex;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:3px;margin-bottom:16px}
+.auth-tab{flex:1;padding:8px 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;border-radius:4px;transition:.2s;font-family:var(--serif)}
+.auth-tab.active{background:var(--cinnabar);color:#fff}
+.auth-tip{font-size:12px;color:var(--dim);margin:10px 0 0;line-height:1.8}
 
-/* 加载 */
-.loading { text-align:center; padding:40px; color:var(--muted); }
-.spinner { width:28px; height:28px; border:3px solid var(--border); border-top-color:var(--primary); border-radius:50%; display:inline-block; animation:spin 1s linear infinite; margin-bottom:10px; }
-@keyframes spin { to{ transform:rotate(360deg); } }
+/* ============ 提示 ============ */
+.toast{position:fixed;top:22px;right:22px;z-index:200;display:flex;flex-direction:column;gap:8px;max-width:340px}
+.toast-item{
+  background:var(--card);border:1px solid var(--border);border-left:3px solid var(--jade);
+  padding:12px 18px;border-radius:6px;font-size:13.5px;box-shadow:0 12px 32px rgba(0,0,0,.5);
+  animation:slideIn .3s cubic-bezier(.22,1,.36,1);line-height:1.7;
+}
+.toast-item.success{border-left-color:var(--success)}
+.toast-item.error{border-left-color:var(--danger)}
+@keyframes slideIn{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
 
-/* 空状态 */
-.empty { text-align:center; padding:60px 20px; color:var(--muted); }
-.empty .icon { font-size:48px; margin-bottom:12px; }
+/* ============ 加载 ============ */
+.loading{text-align:center;padding:44px;color:var(--muted)}
+.spinner{
+  width:26px;height:26px;border:2px solid var(--border);border-top-color:var(--cinnabar);
+  border-radius:50%;display:inline-block;animation:spin 1s linear infinite;margin-bottom:10px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-h2.page-title { font-size:22px; font-weight:700; margin-bottom:6px; }
-p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
+/* ============ 空状态 ============ */
+.empty{text-align:center;padding:56px 20px;color:var(--muted)}
+.empty .icon{
+  width:56px;height:56px;margin:0 auto 14px;border-radius:50%;
+  border:1px dashed var(--border);display:grid;place-items:center;color:var(--dim);
+}
+.empty .icon .ic{width:26px;height:26px}
+.empty h3{font-family:var(--serif);font-size:16px;color:var(--text);margin-bottom:6px;font-weight:600}
+.empty p{font-size:13.5px;line-height:1.8}
 
-.mode-switch { display:flex; gap:6px; background:var(--card2); padding:4px; border-radius:10px; }
-.mode-btn { padding:7px 14px; border-radius:8px; font-size:13px; color:var(--muted); transition:.2s; }
-.mode-btn.active { background:var(--primary); color:#fff; }
+/* ============ 模式切换 ============ */
+.mode-switch{display:flex;gap:3px;background:var(--card2);padding:4px;border-radius:6px;border:1px solid var(--border-soft)}
+.mode-btn{padding:7px 14px;border-radius:4px;font-size:13px;color:var(--muted);transition:.2s}
+.mode-btn.active{background:var(--cinnabar);color:#fff}
 
-.section-label { font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin:20px 0 10px; }
+/* ============ 同步进度条 ============ */
+.progress-wrap{margin-top:16px;padding:14px 16px;background:var(--card2);border:1px solid var(--border);border-radius:8px;display:none}
+.progress-wrap.show{display:block}
+.progress-head{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:9px}
+.progress-bar{height:7px;background:var(--card);border-radius:4px;overflow:hidden;border:1px solid var(--border-soft)}
+.progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--cinnabar));border-radius:4px;transition:width .4s ease}
+.progress-text{font-size:12px;color:var(--dim);margin-top:8px;line-height:1.7;white-space:pre-wrap}
 
-/* 同步进度条 */
-.progress-wrap { margin-top:14px; padding:14px 16px; background:var(--card2); border:1px solid var(--border); border-radius:10px; display:none; }
-.progress-wrap.show { display:block; }
-.progress-head { display:flex; align-items:center; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:8px; }
-.progress-bar { height:8px; background:var(--card); border-radius:6px; overflow:hidden; }
-.progress-fill { height:100%; width:0; background:linear-gradient(90deg,var(--primary),var(--primary2)); border-radius:6px; transition:width .4s ease; }
-.progress-text { font-size:12px; color:var(--muted); margin-top:8px; line-height:1.6; white-space:pre-wrap; }
+/* ============ 统计条 ============ */
+.stat-strip{display:flex;gap:8px;flex-wrap:wrap}
+.stat-cell{
+  flex:1;min-width:120px;background:var(--card2);border:1px solid var(--border-soft);border-radius:6px;
+  padding:12px 14px;text-align:center;transition:.2s;
+}
+.stat-cell:hover{border-color:var(--cinnabar)}
+.stat-cell .num{font-family:var(--serif);font-size:22px;font-weight:700;color:var(--paper)}
+.stat-cell .num i{font-style:normal;color:var(--cinnabar);font-size:13px;margin-right:2px}
+.stat-cell .lab{font-size:11.5px;color:var(--dim);letter-spacing:.12em;margin-top:2px}
+
+/* ============ 响应式 ============ */
+@media (max-width:900px){
+  .navbar{flex-wrap:wrap;padding:10px 16px}
+  .nav-links{order:3;width:100%;justify-content:center}
+  .page{padding:20px 16px 50px}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .stat-cell{min-width:calc(50% - 8px)}
+}
+@media (max-width:600px){
+  .nav-links{overflow-x:auto;justify-content:flex-start}
+  .toolbar .btn{flex:1;justify-content:center}
+  .item-actions .btn{flex:1;justify-content:center}
+}
+
+/* 尊重减弱动效偏好 */
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
 </style>
 </head>
 <body>
 
-<!-- 顶部导航 -->
+<!-- ===== 顶部导航 ===== -->
 <nav class="navbar">
   <div class="nav-brand">
-    <div class="logo">📖</div>
+    <div class="seal" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M12 5c-2-1.6-4.5-2.4-7-2.4V18c2.5 0 5 .8 7 2.4 2-1.6 4.5-2.4 7-2.4V2.6c-2.5 0-5 .8-7 2.4z"/><path d="M12 5v15.4"/><path d="M8.5 9h4M8.5 12.5h4"/></svg>
+    </div>
     <span>AI 小说创作助手</span>
   </div>
   <div class="nav-links">
@@ -173,25 +327,33 @@ p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
   <div class="nav-auth" id="nav-auth"></div>
 </nav>
 
-<!-- 项目列表页 -->
+<!-- ===== 项目列表页 ===== -->
 <div class="page active" id="page-projects">
   <h2 class="page-title">我的小说</h2>
   <p class="page-sub">管理你的小说项目、大纲、人物与章节，AI 会记住所有设定，保持剧情连贯。</p>
   <div class="toolbar">
-    <button class="btn btn-primary" onclick="openCreateProject()">＋ 新建小说</button>
+    <button class="btn btn-primary" onclick="openCreateProject()">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>新建小说
+    </button>
     <div class="spacer"></div>
-    <button class="btn btn-outline btn-sm" onclick="importKnowledge(false)">📥 导入知识库</button>
-    <button class="btn btn-outline btn-sm" onclick="importKnowledge(true)">🔄 重新导入</button>
+    <button class="btn btn-outline btn-sm" onclick="importKnowledge(false)">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>导入知识库
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="importKnowledge(true)">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>重新导入
+    </button>
   </div>
   <div id="project-list"></div>
 </div>
 
-<!-- 项目工作台 -->
+<!-- ===== 项目工作台 ===== -->
 <div class="page" id="page-workspace">
   <div class="toolbar">
-    <button class="btn btn-outline btn-sm" onclick="goProjects()">← 返回</button>
+    <button class="btn btn-outline btn-sm" onclick="goProjects()">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>返回
+    </button>
     <div class="spacer"></div>
-    <span id="ws-project-info" style="font-size:14px;color:var(--muted)"></span>
+    <span id="ws-project-info" style="font-size:14px;color:var(--muted);font-family:var(--serif);letter-spacing:.05em"></span>
   </div>
   <div class="tabs" id="ws-tabs">
     <button class="tab active" data-tab="characters">人物</button>
@@ -203,7 +365,9 @@ p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
   <!-- 人物 -->
   <div class="tab-panel" id="panel-characters" style="display:none">
     <div class="toolbar">
-      <button class="btn btn-primary btn-sm" onclick="openCharacterModal()">＋ 添加人物</button>
+      <button class="btn btn-primary btn-sm" onclick="openCharacterModal()">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>添加人物
+      </button>
     </div>
     <div id="character-list"></div>
   </div>
@@ -211,8 +375,12 @@ p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
   <!-- 章节 -->
   <div class="tab-panel" id="panel-chapters" style="display:none">
     <div class="toolbar">
-      <button class="btn btn-primary btn-sm" onclick="openChapterModal()">＋ 新建章节</button>
-      <button class="btn btn-outline btn-sm" onclick="openImportModal()">📥 导入已有小说</button>
+      <button class="btn btn-primary btn-sm" onclick="openChapterModal()">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>新建章节
+      </button>
+      <button class="btn btn-outline btn-sm" onclick="openImportModal()">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>导入已有小说
+      </button>
     </div>
     <div id="chapter-list"></div>
   </div>
@@ -221,7 +389,7 @@ p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
   <div class="tab-panel" id="panel-writing" style="display:none">
     <div class="toolbar">
       <select id="write-skill" style="max-width:220px" onchange=""></select>
-      <select id="write-topic" style="max-width:200px">
+      <select id="write-topic" style="max-width:210px">
         <option value="auto">参考主题：自动</option>
       </select>
       <div class="mode-switch">
@@ -234,9 +402,11 @@ p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
       <div class="write-input">
         <label>创作指令（选择技能后按模板生成）</label>
         <textarea id="write-instruction" rows="6" placeholder="例：写第一章开篇，主角是个被逐出宗门的废柴少年...&#10;&#10;或：续写第三章，主角第一次使用金手指..."></textarea>
-        <div style="margin-top:12px;display:flex;gap:10px">
-          <select id="write-target" style="flex:1"></select>
-          <button class="btn btn-primary" id="btn-generate" onclick="generateChapter()">✨ AI 生成</button>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+          <select id="write-target" style="flex:1;min-width:180px"></select>
+          <button class="btn btn-primary" id="btn-generate" onclick="generateChapter()">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M12 3l2.2 4.9 5.3.6-4 3.5 1.1 5.2L12 14.9 7.4 17.2l1.1-5.2-4-3.5 5.3-.6z"/><path d="M3 21h18"/></svg>AI 生成
+          </button>
         </div>
       </div>
       <div class="write-output" id="write-output">
@@ -248,14 +418,20 @@ p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
   <!-- Agent 助手（自主剧情 Agent） -->
   <div class="tab-panel" id="panel-agent" style="display:none">
     <div class="card">
-      <div class="card-title"><span class="icon">🤖</span>自主剧情 Agent</div>
-      <p style="font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:14px">
+      <div class="card-title"><span class="icon">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+      </span>自主剧情 Agent</div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.9;margin-bottom:14px">
         写完后点「分析本章」，Agent 会自动把章节里的新事件、人物状态、世界设定、关系变化、伏笔埋收写进记忆库；
         再点「规划下一章」，Agent 基于完整记忆生成接下来的大纲，写作时自动注入精简状态包，防止剧情脱离设定。
       </p>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-primary btn-sm" onclick="syncProject()">🔄 全量同步（分析所有章节）</button>
-        <button class="btn btn-outline btn-sm" onclick="loadAgentPanel()">📊 刷新记忆状态</button>
+        <button class="btn btn-primary btn-sm" onclick="syncProject()">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>全量同步（分析所有章节）
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="loadAgentPanel()">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>刷新记忆状态
+        </button>
       </div>
       <div class="progress-wrap" id="sync-progress">
         <div class="progress-head">
@@ -268,25 +444,38 @@ p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
     </div>
 
     <!-- 记忆统计 -->
-    <div class="grid grid-3" id="agent-stats" style="margin-bottom:16px">
-      <div class="card"><div class="card-title">🧠 记忆统计</div><div style="font-size:13px;color:var(--muted)" id="agent-stats-body">加载中...</div></div>
+    <div class="card">
+      <div class="card-title"><span class="icon">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      </span>记忆统计</div>
+      <div class="stat-strip" id="agent-stats-body"><div class="loading">加载中...</div></div>
     </div>
 
     <!-- 下一章规划 -->
     <div class="card">
-      <div class="card-title"><span class="icon">🗺️</span>规划下一章</div>
+      <div class="card-title"><span class="icon">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>
+      </span>规划下一章</div>
       <div class="form-row">
         <div><label>对下一章的指令（可留空，Agent 自主判断）</label>
           <textarea id="plan-instruction" rows="2" placeholder="例：主角进入剑冢后先遭遇一名筑基杀手，制造惊险场面；结尾引出神秘黑袍人的线索"></textarea>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="planNext()">🧭 生成下一章规划</button>
+      <button class="btn btn-primary" onclick="planNext()">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>生成下一章规划
+      </button>
       <div class="plan-card" id="plan-card">
         <div class="plan-card-head">
-          <span class="plan-card-title" id="plan-title">下一章规划</span>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-outline plan-btn" onclick="copyPlanToWrite()">✍️ 用于写作</button>
-            <button class="btn btn-primary plan-btn" onclick="createChapterFromPlan()">📄 按规划新建章节</button>
+          <span class="plan-card-title" id="plan-title">
+            <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>下一章规划
+          </span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-outline plan-btn" onclick="copyPlanToWrite()">
+              <svg class="ic" viewBox="0 0 24 24"><path d="M4 20c6-1 12-5 15-13-3 1-5 2-7 3-1 2-2 5-2 8z"/><path d="M12 10c2-2 5-4 8-5"/></svg>用于写作
+            </button>
+            <button class="btn btn-primary plan-btn" onclick="createChapterFromPlan()">
+              <svg class="ic" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>按规划新建章节
+            </button>
           </div>
         </div>
         <div class="plan-card-body" id="plan-output"><div style="color:var(--muted);text-align:center;padding-top:30px">生成的大纲会显示在这里，可直接用于 AI 写作或一键新建章节</div></div>
@@ -294,54 +483,68 @@ p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
     </div>
 
     <!-- 记忆库详情 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="agent-duo">
       <div class="card">
-        <div class="card-title"><span class="icon">👥</span>人物关系（Agent 自动维护）</div>
+        <div class="card-title"><span class="icon">
+          <svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 5a3.5 3.5 0 0 1 0 6.6M17.5 15c2 .8 3.4 2.5 4 5"/></svg>
+        </span>人物关系（Agent 自动维护）</div>
         <div id="agent-relationships" style="font-size:13px;color:var(--muted)">加载中...</div>
       </div>
       <div class="card">
-        <div class="card-title"><span class="icon">📜</span>剧情时间线（Agent 自动维护）</div>
+        <div class="card-title"><span class="icon">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>
+        </span>剧情时间线（Agent 自动维护）</div>
         <div id="agent-timeline" style="font-size:13px;color:var(--muted)">加载中...</div>
       </div>
     </div>
     <div class="card">
-      <div class="card-title"><span class="icon">🔗</span>伏笔库（Agent 自动埋收，可人工标记）</div>
+      <div class="card-title"><span class="icon">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 .5l3-3a4 4 0 0 0-5.7-5.7L12 7"/><path d="M14 10a4 4 0 0 0-6-.5l-3 3a4 4 0 0 0 5.7 5.7L12 17"/></svg>
+      </span>伏笔库（Agent 自动埋收，可人工标记）</div>
       <div id="agent-foreshadowing" style="font-size:13px;color:var(--muted)">加载中...</div>
     </div>
     <div class="card">
-      <div class="card-title"><span class="icon">🌍</span>世界设定（随剧情自动扩充）</div>
-      <div id="agent-world" style="font-size:13px;color:var(--muted);white-space:pre-wrap;line-height:1.8">加载中...</div>
+      <div class="card-title"><span class="icon">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18-3-3-3-15 0-18z"/></svg>
+      </span>世界设定（随剧情自动扩充）</div>
+      <div id="agent-world" style="font-size:13px;color:var(--muted);white-space:pre-wrap;line-height:1.9">加载中...</div>
     </div>
   </div>
 </div>
 
-<!-- 技能中心 -->
+<!-- ===== 技能中心 ===== -->
 <div class="page" id="page-skills">
   <h2 class="page-title">写作技能库</h2>
   <p class="page-sub">10 个预设写作技能，每个技能绑定相关知识主题，结构化生成、节省 token。</p>
   <div class="grid grid-3" id="skill-grid"></div>
 </div>
 
-<!-- 知识库 -->
+<!-- ===== 知识库 ===== -->
 <div class="page" id="page-knowledge">
   <h2 class="page-title">写作知识库</h2>
   <p class="page-sub">12 大主题网文写作资料，AI 写作时自动检索相关知识注入。</p>
   <div class="toolbar">
     <input id="kb-search" placeholder="语义搜索：如 '如何设计金手指'" style="flex:1;max-width:400px" onkeydown="if(event.key==='Enter')searchKB()">
-    <button class="btn btn-primary btn-sm" onclick="searchKB()">🔍 搜索</button>
+    <button class="btn btn-primary btn-sm" onclick="searchKB()">
+      <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>搜索
+    </button>
     <div class="spacer"></div>
-    <button class="btn btn-outline btn-sm" onclick="importKnowledge(false)">📥 导入知识库</button>
+    <button class="btn btn-outline btn-sm" onclick="importKnowledge(false)">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>导入知识库
+    </button>
   </div>
-  <div style="display:grid;grid-template-columns:220px 1fr;gap:20px">
+  <div style="display:grid;grid-template-columns:220px 1fr;gap:20px" class="kb-layout">
     <div class="card" style="align-self:start">
-      <div class="card-title"><span class="icon">📚</span>主题分类</div>
+      <div class="card-title"><span class="icon">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h4"/></svg>
+      </span>主题分类</div>
       <div id="kb-topics"></div>
     </div>
     <div id="kb-content"></div>
   </div>
 </div>
 
-<!-- 人物弹窗 -->
+<!-- ===== 人物弹窗 ===== -->
 <div class="modal-overlay" id="modal-character">
   <div class="modal">
     <h3 id="character-modal-title">添加人物</h3>
@@ -361,7 +564,7 @@ p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
   </div>
 </div>
 
-<!-- 章节弹窗 -->
+<!-- ===== 章节弹窗 ===== -->
 <div class="modal-overlay" id="modal-chapter">
   <div class="modal">
     <h3 id="chapter-modal-title">新建章节</h3>
@@ -375,28 +578,30 @@ p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
   </div>
 </div>
 
-<!-- 导入已有小说弹窗 -->
+<!-- ===== 导入已有小说弹窗 ===== -->
 <div class="modal-overlay" id="modal-import">
   <div class="modal">
-    <h3>📥 导入已有小说</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">支持 .txt / .md 文件或直接粘贴文本，自动按「第X章/回/节」标题拆分导入为章节。<br>导入后 AI 续写时会自动读取最近章节，保持剧情连贯。</p>
+    <h3>导入已有小说</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.9">支持 .txt / .md 文件或直接粘贴文本，自动按「第X章/回/节」标题拆分导入为章节。<br>导入后 AI 续写时会自动读取最近章节，保持剧情连贯。</p>
     <div class="form-row">
       <div>
         <label>选择文件</label>
         <input type="file" id="import-file" accept=".txt,.md" style="padding:8px">
       </div>
     </div>
-    <div style="text-align:center;color:var(--muted);font-size:13px;margin:4px 0 10px">— 或 —</div>
+    <div style="text-align:center;color:var(--dim);font-size:13px;margin:6px 0 12px;letter-spacing:.2em">— 或 —</div>
     <div class="form-row"><div><label>粘贴小说全文</label><textarea id="import-content" rows="14" placeholder="粘贴你的小说全文，包含章节标题（如：第一章 xxx）"></textarea></div></div>
-    <div id="import-preview" style="font-size:13px;color:#a5b4fc;margin-bottom:8px"></div>
+    <div id="import-preview" style="font-size:13px;color:var(--gold);margin-bottom:8px"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('modal-import')">取消</button>
-      <button class="btn btn-primary" onclick="doImport()">🚀 拆分导入</button>
+      <button class="btn btn-primary" onclick="doImport()">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 15V3M7 10l5 5 5-5M5 21h14"/></svg>拆分导入
+      </button>
     </div>
   </div>
 </div>
 
-<!-- 项目弹窗 -->
+<!-- ===== 项目弹窗 ===== -->
 <div class="modal-overlay" id="modal-project">
   <div class="modal">
     <h3>新建小说</h3>
@@ -410,22 +615,22 @@ p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
   </div>
 </div>
 
-<!-- 章节阅读弹窗 -->
+<!-- ===== 章节阅读弹窗 ===== -->
 <div class="modal-overlay" id="modal-read">
-  <div class="modal" style="max-width:760px">
+  <div class="modal" style="max-width:780px">
     <h3 id="read-title"></h3>
-    <div id="read-summary" style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:8px;padding:10px 14px;font-size:13px;color:#a5b4fc;margin-bottom:12px;white-space:pre-wrap"></div>
-    <div id="read-content" style="font-size:14px;line-height:2;white-space:pre-wrap"></div>
+    <div id="read-summary" style="background:var(--gold-soft);border:1px solid rgba(201,162,75,.3);border-radius:6px;padding:10px 14px;font-size:13px;color:var(--gold);margin-bottom:14px;white-space:pre-wrap;line-height:1.8"></div>
+    <div id="read-content" style="font-size:14px;line-height:2.1;white-space:pre-wrap"></div>
     <div class="modal-actions">
-      <button class="btn btn-outline btn-sm" id="btn-summarize" onclick="summarizeChapter()">🤖 生成摘要</button>
-      <button class="btn btn-outline btn-sm" id="btn-analyze" onclick="analyzeChapter()">🧠 分析本章（更新记忆）</button>
+      <button class="btn btn-outline btn-sm" id="btn-summarize" onclick="summarizeChapter()">生成摘要</button>
+      <button class="btn btn-outline btn-sm" id="btn-analyze" onclick="analyzeChapter()">分析本章（更新记忆）</button>
       <div class="spacer" style="flex:1"></div>
       <button class="btn btn-primary" onclick="closeModal('modal-read')">关闭</button>
     </div>
   </div>
 </div>
 
-<!-- 技能详情弹窗 -->
+<!-- ===== 技能详情弹窗 ===== -->
 <div class="modal-overlay" id="modal-skill">
   <div class="modal">
     <h3 id="skill-detail-name"></h3>
@@ -436,7 +641,7 @@ p.page-sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
   </div>
 </div>
 
-<!-- 作者登录/注册弹窗 -->
+<!-- ===== 作者登录/注册弹窗 ===== -->
 <div class="modal-overlay" id="modal-auth">
   <div class="modal" style="max-width:380px">
     <h3 id="auth-title">作者登录</h3>
@@ -465,8 +670,31 @@ let topics = [];
 let editingCharId = null;
 let editingChapId = null;
 let readingChapId = null;
+let currentPlan = null, currentPlanChapter = null;
 
 const API = '/api';
+
+// 技能 emoji 图标 → 内联 SVG 映射（写意细线风）
+const ICON_MAP = {
+  '🚀': '<path d="M12 3s6 2 7 9c-2 3-4 4-7 4s-5-1-7-4c1-7 7-9 7-9z"/><circle cx="12" cy="10" r="2"/><path d="M9 15l-2 5 5-2M15 15l2 5-5-2"/>',
+  '✍️': '<path d="M4 20c6-1 12-5 15-13-3 1-5 2-7 3-1 2-2 5-2 8z"/><path d="M12 10c2-2 5-4 8-5"/>',
+  '📋': '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',
+  '👤': '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 4.5-7 8-7s6.5 2.5 8 7"/>',
+  '💡': '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 11c.7.6 1 1.3 1 2h5c0-.7.3-1.4 1-2A6 6 0 0 0 12 3z"/>',
+  '⚡': '<path d="M13 2L4 14h6l-1 8 9-12h-6z"/>',
+  '🔗': '<path d="M10 14a4 4 0 0 0 6 .5l3-3a4 4 0 0 0-5.7-5.7L12 7"/><path d="M14 10a4 4 0 0 0-6-.5l-3 3a4 4 0 0 0 5.7 5.7L12 17"/>',
+  '📝': '<path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/>',
+  '💬': '<path d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/>',
+  '🔍': '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  '📖': '<path d="M12 5c-2-1.6-4.5-2.4-7-2.4V18c2.5 0 5 .8 7 2.4 2-1.6 4.5-2.4 7-2.4V2.6c-2.5 0-5 .8-7 2.4z"/><path d="M12 5v15.4"/>',
+  '📄': '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/>',
+  '📚': '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h4"/>',
+  '🗺️': '<path d="M4 5l6-2 4 2 6-2v16l-6 2-4-2-6 2z"/><path d="M10 3v16M14 5v16"/>',
+};
+function iconSvg(e){
+  const s = ICON_MAP[e] || '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>';
+  return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + s + '</svg>';
+}
 
 // ============ 工具函数 ============
 async function api(url, method='GET', body=null) {
@@ -538,7 +766,7 @@ async function loadProjects() {
   try {
     const data = await api('/projects');
     if (!data.items.length) {
-      el.innerHTML = '<div class="empty"><div class="icon">📚</div><h3>还没有小说项目</h3><p>点击右上角「新建小说」开始创作</p></div>';
+      el.innerHTML = '<div class="empty"><div class="icon">' + iconSvg('📚') + '</div><h3>还没有小说项目</h3><p>点击「新建小说」开始创作</p></div>';
       return;
     }
     el.innerHTML = data.items.map(p=>`
@@ -548,7 +776,7 @@ async function loadProjects() {
           <div class="item-sub">${esc(p.genre || '未分类')} · ${esc(p.description || '暂无简介')}</div>
         </div>
         <div class="item-actions">
-          <button class="btn btn-outline btn-sm" onclick="openWorkspace('${p.id}')">✏️ 进入</button>
+          <button class="btn btn-outline btn-sm" onclick="openWorkspace('${p.id}')">进入</button>
           <button class="btn btn-danger btn-sm" onclick="removeProject('${p.id}')">删除</button>
         </div>
       </div>`).join('');
@@ -629,7 +857,7 @@ async function loadCharacters() {
   try {
     const chars = await api(`/projects/${currentProject.id}/characters`);
     if (!chars.length) {
-      el.innerHTML = '<div class="empty"><div class="icon">👤</div><p>还没有人物，点击「添加人物」创建人物卡</p></div>';
+      el.innerHTML = '<div class="empty"><div class="icon">' + iconSvg('👤') + '</div><p>还没有人物，点击「添加人物」创建人物卡</p></div>';
       return;
     }
     el.innerHTML = chars.map(c=>`
@@ -706,7 +934,7 @@ async function loadChapters() {
   try {
     const data = await api(`/projects/${currentProject.id}/chapters`);
     if (!data.items.length) {
-      el.innerHTML = '<div class="empty"><div class="icon">📄</div><p>还没有章节，点击「新建章节」或直接用 AI 写作</p></div>';
+      el.innerHTML = '<div class="empty"><div class="icon">' + iconSvg('📄') + '</div><p>还没有章节，点击「新建章节」或直接用 AI 写作</p></div>';
       return;
     }
     el.innerHTML = data.items.map(c=>`
@@ -822,7 +1050,7 @@ async function readChapter(cid) {
     const c = await api(`/projects/${currentProject.id}/chapters/${cid}`);
     readingChapId = cid;
     document.getElementById('read-title').textContent = `第${c.chapter_number}章 ${c.title}`;
-    document.getElementById('read-summary').textContent = c.summary ? '📌 ' + c.summary : '（暂无摘要，可点击生成）';
+    document.getElementById('read-summary').textContent = c.summary ? '摘要：' + c.summary : '（暂无摘要，可点击生成）';
     document.getElementById('read-content').textContent = c.content || '（空章节）';
     openModal('modal-read');
   } catch(e) { toast(e.message,'error'); }
@@ -834,10 +1062,10 @@ async function summarizeChapter() {
   btn.disabled = true; btn.textContent = '生成中...';
   try {
     const c = await api(`/projects/${currentProject.id}/chapters/${readingChapId}/summarize`, 'POST');
-    document.getElementById('read-summary').textContent = '📌 ' + c.summary;
+    document.getElementById('read-summary').textContent = '摘要：' + c.summary;
     toast('摘要已生成','success');
   } catch(e) { toast(e.message,'error'); }
-  btn.disabled = false; btn.textContent = '🤖 生成摘要';
+  btn.disabled = false; btn.textContent = '生成摘要';
 }
 
 // ============ Agent 助手 ============
@@ -851,11 +1079,11 @@ async function analyzeChapter() {
     const msg = `分析完成：人物 ${a.characters||0} · 设定 ${a.world||0} · 关系 ${a.relationships||0} · 新伏笔 ${a.foreshadowing_planted||0} · 回收伏笔 ${a.foreshadowing_resolved||0} · 时间线 ${a.timeline||0}`;
     toast(msg, 'success');
     if (r.analysis && r.analysis.chapter_summary) {
-      document.getElementById('read-summary').textContent = '📌 ' + r.analysis.chapter_summary;
+      document.getElementById('read-summary').textContent = '摘要：' + r.analysis.chapter_summary;
     }
     loadAgentPanel();
   } catch(e) { toast(e.message,'error'); }
-  btn.disabled = false; btn.textContent = '🧠 分析本章（更新记忆）';
+  btn.disabled = false; btn.textContent = '分析本章（更新记忆）';
 }
 
 async function loadAgentPanel() {
@@ -865,15 +1093,15 @@ async function loadAgentPanel() {
       api(`/projects/${currentProject.id}/memory-stats`),
       api(`/projects/${currentProject.id}/story-state`),
     ]);
-    document.getElementById('agent-stats-body').innerHTML = `
-      <div style="display:flex;gap:18px;flex-wrap:wrap">
-        <span>📄 章节 <b style="color:#a5b4fc">${stats.chapters}</b></span>
-        <span>👤 人物卡 <b style="color:#a5b4fc">${stats.characters}</b></span>
-        <span>📜 时间线 <b style="color:#a5b4fc">${stats.timeline}</b></span>
-        <span>🔗 关系 <b style="color:#a5b4fc">${stats.relationships}</b></span>
-        <span>🔓 未回收伏笔 <b style="color:#f59e0b">${stats.foreshadowing_open}</b></span>
-        <span>✅ 已回收伏笔 <b style="color:#4ade80">${stats.foreshadowing_resolved}</b></span>
-      </div>`;
+    const statCell = (num, lab) =>
+      `<div class="stat-cell"><div class="num">${num}</div><div class="lab">${lab}</div></div>`;
+    document.getElementById('agent-stats-body').innerHTML =
+      statCell(stats.chapters, '章节') +
+      statCell(stats.characters, '人物卡') +
+      statCell(stats.timeline, '时间线') +
+      statCell(stats.relationships, '关系') +
+      statCell(`<i>未收</i>${stats.foreshadowing_open}`, '伏笔待收') +
+      statCell(`<i>已收</i>${stats.foreshadowing_resolved}`, '伏笔已收');
 
     // 关系
     const relEl = document.getElementById('agent-relationships');
@@ -884,7 +1112,7 @@ async function loadAgentPanel() {
         <div class="kb-item">
           <div><b>${esc(r.char_a)}</b> — <b>${esc(r.char_b)}</b>
             <span class="badge" style="margin-left:6px">${esc(r.relation||'')}</span>
-            <span class="badge ${r.sentiment==='positive'?'badge-success':r.sentiment==='negative'?'':'badge-primary'}">${esc(r.sentiment)}/${esc(r.trend)}</span>
+            <span class="badge ${r.sentiment==='positive'?'badge-success':r.sentiment==='negative'?'badge-danger':'badge-primary'}">${esc(r.sentiment)}/${esc(r.trend)}</span>
           </div>
           <div class="kb-meta">最近变化：第${r.last_change_chapter||'?'}章${r.note ? ' · ' + esc(r.note.slice(0,60)) : ''}</div>
           <div style="margin-top:6px"><button class="btn btn-danger btn-sm" onclick="deleteRelationship('${r.id}')">删除</button></div>
@@ -899,7 +1127,7 @@ async function loadAgentPanel() {
       tlEl.innerHTML = state.timeline.slice(-12).reverse().map(t=>`
         <div class="kb-item">
           <div><b>第${t.chapter_number}章</b> @ ${esc(t.location||'未知地点')} <span class="badge">${(t.characters||[]).join('、')}</span></div>
-          <p style="font-size:12px;line-height:1.7">${esc(t.events||'')}</p>
+          <p style="font-size:12px;line-height:1.8">${esc(t.events||'')}</p>
         </div>`).join('');
     }
 
@@ -911,7 +1139,7 @@ async function loadAgentPanel() {
       fhEl.innerHTML = '<div style="padding:8px 0">暂无伏笔，分析章节后自动识别</div>';
     } else {
       fhEl.innerHTML =
-        (openList.length ? '<div class="section-label">🔓 未回收</div>' : '') +
+        (openList.length ? '<div class="section-label">未回收</div>' : '') +
         openList.map(f=>`
           <div class="list-item">
             <div class="item-main">
@@ -919,13 +1147,13 @@ async function loadAgentPanel() {
               <div class="item-sub">第${f.planted_chapter}章埋 · ${esc(f.type)} · 重要度 ${esc(f.importance)}</div>
             </div>
             <div class="item-actions">
-              <button class="btn btn-outline btn-sm" onclick="resolveForeshadow('${f.id}')">✅ 标记已回收</button>
+              <button class="btn btn-outline btn-sm" onclick="resolveForeshadow('${f.id}')">标记已回收</button>
               <button class="btn btn-danger btn-sm" onclick="deleteForeshadow('${f.id}')">删除</button>
             </div>
           </div>`).join('') +
-        (resolvedList.length ? '<div class="section-label">✅ 已回收</div>' : '') +
+        (resolvedList.length ? '<div class="section-label">已回收</div>' : '') +
         resolvedList.slice(-8).reverse().map(f=>`
-          <div class="list-item" style="opacity:.7">
+          <div class="list-item" style="opacity:.65">
             <div class="item-main">
               <div class="item-title" style="font-size:14px">${esc(f.description)}</div>
               <div class="item-sub">第${f.planted_chapter}章埋 → 第${f.resolved_chapter}章回收</div>
@@ -958,11 +1186,11 @@ function renderSyncProgress(s) {
       : '同步中…';
     text.textContent = `已同步：${s.synced.length ? s.synced.join('、') : '无'}${s.errors.length ? '\n失败：' + s.errors.join('；') : ''}`;
   } else if (s.status === 'done') {
-    title.textContent = '✅ 同步完成';
+    title.textContent = '同步完成';
     text.textContent = `成功 ${s.synced.length} 章${s.errors.length ? '，失败 ' + s.errors.length + ' 章：' + s.errors.join('；') : ''}`;
     if (s.total === 0) text.textContent = '所有章节已同步，无需重复分析';
   } else if (s.status === 'error') {
-    title.textContent = '❌ 同步失败';
+    title.textContent = '同步失败';
     text.textContent = s.errors.join('；');
   }
 }
@@ -1008,25 +1236,23 @@ async function planNext() {
   const card = document.getElementById('plan-card');
   const title = document.getElementById('plan-title');
   const out = document.getElementById('plan-output');
-  card.style.display = 'block';
-  title.textContent = '第 ' + (currentPlanChapter || '') + ' 章规划';
+  card.classList.add('show');
+  title.innerHTML = '第 ' + (currentPlanChapter || '') + ' 章规划';
   out.textContent = 'Agent 正在通读记忆与最新章节，规划下一章...';
   const btn = document.querySelector('#panel-agent button[onclick="planNext()"]');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ 规划中...'; }
+  if (btn) { btn.disabled = true; btn.textContent = '规划中...'; }
   try {
     const r = await api(`/projects/${currentProject.id}/plan-next`, 'POST', { instruction });
     currentPlan = r;
     currentPlanChapter = r.chapter_number;
-    title.textContent = '第 ' + r.chapter_number + ' 章 · ' + (r.title || '未命名');
+    title.innerHTML = iconSvg('🗺️') + '第 ' + r.chapter_number + ' 章 · ' + esc(r.title || '未命名');
     // 标题行已在卡片头部展示，正文中移除，避免重复
     let body = r.plan.replace(/本章标题\s*[（(]建议[）)]\s*[：:][^\n]*\n?/, '').trim();
     out.textContent = body;
     toast('下一章规划已生成（建议章节名：' + (r.title || '未命名') + '）','success');
   } catch(e) { out.textContent = '规划失败：' + e.message; toast(e.message,'error'); }
-  if (btn) { btn.disabled = false; btn.textContent = '🧭 生成下一章规划'; }
+  if (btn) { btn.disabled = false; btn.textContent = '生成下一章规划'; }
 }
-
-let currentPlan = null, currentPlanChapter = null;
 
 // 把规划作为创作指令填入 AI 写作页
 function copyPlanToWrite() {
@@ -1094,7 +1320,7 @@ async function loadSkills() {
     skills = await api('/skills');
     const sel = document.getElementById('write-skill');
     sel.innerHTML = '<option value="auto">技能：自动匹配</option>' +
-      skills.map(s=>`<option value="${s.id}">${s.icon} ${s.name}</option>`).join('');
+      skills.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
   } catch(e) { /* 忽略 */ }
 }
 
@@ -1133,7 +1359,7 @@ async function generateChapter() {
   if (!instruction) { toast('请输入创作指令','error'); return; }
 
   const btn = document.getElementById('btn-generate');
-  btn.disabled = true; btn.textContent = '⏳ AI 创作中...';
+  btn.disabled = true; btn.textContent = 'AI 创作中...';
   const out = document.getElementById('write-output');
   out.textContent = 'AI 正在创作（约需 1-3 分钟，取决于模型速度），请耐心等待...\n';
 
@@ -1153,7 +1379,7 @@ async function generateChapter() {
     out.textContent = '生成失败：' + e.message;
     toast(e.message,'error');
   }
-  btn.disabled = false; btn.textContent = '✨ AI 生成';
+  btn.disabled = false; btn.textContent = 'AI 生成';
 }
 
 // ============ 知识库 ============
@@ -1199,7 +1425,7 @@ async function searchKB() {
   el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
     const chunks = await api('/knowledge/search', 'POST', { query: q });
-    el.innerHTML = '<div class="card"><div class="card-title">🔍 搜索结果：' + esc(q) + '</div></div>' +
+    el.innerHTML = '<div class="card"><div class="card-title">搜索结果：' + esc(q) + '</div></div>' +
       chunks.map(c=>`
       <div class="kb-item">
         <h4>${esc(c.title)} <span class="badge">${esc(c.topic)}</span></h4>
@@ -1227,7 +1453,7 @@ async function loadSkillsPage() {
     skills = await api('/skills');
     el.innerHTML = skills.map(s=>`
       <div class="skill-card" onclick='showSkillDetail(${JSON.stringify(s)})'>
-        <div class="skill-icon">${s.icon}</div>
+        <div class="skill-icon">${iconSvg(s.icon)}</div>
         <div class="skill-name">${esc(s.name)}</div>
         <div class="skill-desc">${esc(s.scenario||'')}</div>
         <div class="skill-tags">${(s.boundTopics||[]).slice(0,3).map(t=>`<span class="badge badge-primary">${esc(t)}</span>`).join('')}</div>
@@ -1236,20 +1462,20 @@ async function loadSkillsPage() {
 }
 
 function showSkillDetail(s) {
-  document.getElementById('skill-detail-name').textContent = s.icon + ' ' + s.name;
+  document.getElementById('skill-detail-name').innerHTML = iconSvg(s.icon) + ' ' + esc(s.name);
   document.getElementById('skill-detail-body').innerHTML = `
     <div class="section-label">适用场景</div>
-    <p style="font-size:14px;color:var(--muted);line-height:1.7">${esc(s.scenario||'')}</p>
+    <p style="font-size:14px;color:var(--muted);line-height:1.8">${esc(s.scenario||'')}</p>
     <div class="section-label">执行步骤</div>
-    <ol style="padding-left:20px;font-size:14px;color:var(--muted);line-height:2">
+    <ol style="padding-left:22px;font-size:14px;color:var(--muted);line-height:2.1">
       ${(s.steps||[]).map(st=>`<li>${esc(st)}</li>`).join('')}
     </ol>
     <div class="section-label">输出格式</div>
-    <p style="font-size:14px;color:var(--muted);line-height:1.7">${esc(s.outputFormat||'')}</p>
+    <p style="font-size:14px;color:var(--muted);line-height:1.8">${esc(s.outputFormat||'')}</p>
     <div class="section-label">绑定知识主题</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">${(s.boundTopics||[]).map(t=>`<span class="badge badge-primary">${esc(t)}</span>`).join('')}</div>
     <div class="section-label">技能说明</div>
-    <p style="font-size:14px;color:var(--muted);line-height:1.7">${esc(s.description||'')}</p>
+    <p style="font-size:14px;color:var(--muted);line-height:1.8">${esc(s.description||'')}</p>
   `;
   openModal('modal-skill');
 }
@@ -1262,7 +1488,7 @@ function updateAuthUI() {
   let user = null;
   try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch(e) {}
   if (user && user.username) {
-    el.innerHTML = `<div class="user-chip">👤 <span>${esc(user.username)}</span>
+    el.innerHTML = `<div class="user-chip"><span class="avatar">${esc(user.username[0]||'?')}</span><span>${esc(user.username)}</span>
       <button class="btn btn-outline btn-sm" onclick="logout()">退出</button></div>`;
   } else {
     el.innerHTML = `
@@ -1297,7 +1523,7 @@ async function submitAuth() {
   if (!username) { toast('请输入用户名','error'); return; }
   if (!password) { toast('请输入密码','error'); return; }
   const btn = document.getElementById('btn-auth');
-  btn.disabled = true; btn.textContent = '⏳ 请稍候...';
+  btn.disabled = true; btn.textContent = '请稍候...';
   try {
     const r = await api(authMode === 'login' ? '/auth/login' : '/auth/register', 'POST', { username, password });
     localStorage.setItem('token', r.token);
