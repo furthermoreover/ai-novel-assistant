@@ -1,0 +1,28 @@
+# 密钥与本地环境（绝不提交）
+.env
+*.env
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# 本地数据与安装包
+PostgreSQL/
+*.log
+*.zip
+*.7z
+
+# IDE / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 运行时
+nohup.out

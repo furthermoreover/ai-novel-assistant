@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 小说创作助手 · 让 AI 记住你的故事</title>
+<style>
+  :root{
+    --bg:#0b0e14; --bg2:#11151f; --card:#141927; --card2:#0f1320;
+    --border:#232b3d; --text:#e6e9f2; --muted:#8b93a7;
+    --primary:#6366f1; --primary2:#a78bfa; --accent:#22d3ee;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'PingFang SC','Microsoft YaHei',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  a{color:var(--primary2);text-decoration:none}
+  /* Hero */
+  .hero{text-align:center;padding:80px 24px 60px;background:radial-gradient(ellipse at top,rgba(99,102,241,.18),transparent 60%)}
+  .logo{font-size:52px;margin-bottom:16px}
+  .hero h1{font-size:42px;font-weight:800;background:linear-gradient(90deg,#a5b4fc,#a78bfa,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .hero .sub{color:var(--muted);font-size:17px;margin-top:14px;max-width:640px;margin-inline:auto}
+  .badges{margin-top:24px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .badge{background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);color:#a5b4fc;border-radius:999px;padding:5px 16px;font-size:13px}
+  .btn{display:inline-block;margin-top:28px;background:linear-gradient(90deg,#6366f1,#8b5cf6);color:#fff;padding:12px 30px;border-radius:10px;font-weight:600;font-size:15px;transition:.2s}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(99,102,241,.4)}
+  /* Sections */
+  section{padding:56px 0}
+  section h2{font-size:26px;font-weight:700;margin-bottom:10px}
+  section .lead{color:var(--muted);margin-bottom:32px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:26px;transition:.2s}
+  .card:hover{transform:translateY(-4px);border-color:var(--primary)}
+  .card .ico{font-size:30px;margin-bottom:12px}
+  .card h3{font-size:17px;margin-bottom:8px}
+  .card p{color:var(--muted);font-size:14px}
+  /* Pipeline */
+  .pipeline{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+  .step{flex:1;min-width:180px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;position:relative}
+  .step .n{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;width:22px;height:22px;border-radius:50%;font-size:12px;line-height:22px}
+  .step .s-ico{font-size:26px;margin-bottom:8px}
+  .step h4{font-size:14px;margin-bottom:6px}
+  .step p{font-size:12px;color:var(--muted)}
+  /* Arch */
+  .arch{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  .arch .box{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:18px}
+  .arch .box h4{font-size:14px;color:var(--primary2);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:8px}
+  .arch .box ul{list-style:none;font-size:13px;color:var(--muted)}
+  .arch .box li{padding:4px 0}
+  /* Quickstart */
+  code{background:#1a2133;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:13px;color:#a5b4fc}
+  pre{background:#0d1117;border:1px solid var(--border);border-radius:12px;padding:18px;overflow-x:auto;font-size:13px;color:#c9d1d9;line-height:1.8;margin-top:12px}
+  pre code{background:none;border:none;padding:0;color:inherit}
+  ol.steps{margin:16px 0 0 20px;color:var(--muted);font-size:14px}
+  ol.steps li{padding:5px 0}
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:40px 24px;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="logo">📖</div>
+  <h1>AI 小说创作助手</h1>
+  <p class="sub">一个带 RAG 知识库与自主剧情 Agent 长期记忆的本地网文创作工具 —— AI 记住你的大纲、人物、设定、伏笔与时间线，剧情永不脱轨。</p>
+  <div class="badges">
+    <span class="badge">RAG 知识库</span>
+    <span class="badge">自主剧情 Agent</span>
+    <span class="badge">长期记忆</span>
+    <span class="badge">自动规划章节</span>
+    <span class="badge">作者账号</span>
+    <span class="badge">开源 · MIT</span>
+  </div>
+  <a class="btn" href="https://github.com/furthermoreover/ai-novel-assistant" target="_blank" rel="noopener">查看源码 →</a>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>✨ 核心能力</h2>
+    <p class="lead">从灵感到连载，AI 全程记住你的世界。</p>
+    <div class="grid">
+      <div class="card"><div class="ico">📚</div><h3>RAG 知识库</h3><p>内置 12 篇网文写作方法论（黄金三章、爽点节奏、伏笔悬念、玄幻专项…），向量化检索，写作时自动注入相关知识。</p></div>
+      <div class="card"><div class="ico">🧠</div><h3>自主剧情 Agent</h3><p>每分析一章，自动更新人物卡、世界设定、人物关系、伏笔库与剧情时间线，无需手动维护。</p></div>
+      <div class="card"><div class="ico">🧭</div><h3>自动规划下一章</h3><p>基于完整记忆生成下一章大纲与对仗式章节名（如"剑冢将启"），一键按规划新建章节。</p></div>
+      <div class="card"><div class="ico">✍️</div><h3>AI 写作</h3><p>10 个预设写作技能 + 三种记忆注入模式（自动 / 精简状态包 / 完整状态包），省 token 且不丢设定。</p></div>
+      <div class="card"><div class="ico">💾</div><h3>长期记忆</h3><p>所有设定持久化到 PostgreSQL，重启不丢失；单章分析与全量同步带进度条。</p></div>
+      <div class="card"><div class="ico">🔐</div><h3>作者账号</h3><p>注册 / 登录，项目按账号隔离；密码 PBKDF2 加密，登录态 30 天有效。</p></div>
+    </div>
+  </div>
+</section>
+
+<section style="background:var(--bg2)">
+  <div class="wrap">
+    <h2>🔁 创作工作流</h2>
+    <p class="lead">写入 → 记忆 → 规划 → 再写入，形成自我强化的创作闭环。</p>
+    <div class="pipeline">
+      <div class="step"><span class="n">1</span><div class="s-ico">📝</div><h4>撰写 / 导入章节</h4><p>粘贴或按 AI 规划生成正文</p></div>
+      <div class="step"><span class="n">2</span><div class="s-ico">🧠</div><h4>Agent 分析本章</h4><p>抽取人物 / 设定 / 关系 / 伏笔</p></div>
+      <div class="step"><span class="n">3</span><div class="s-ico">🗄️</div><h4>写入长期记忆</h4><p>人物卡、时间线、伏笔库自动更新</p></div>
+      <div class="step"><span class="n">4</span><div class="s-ico">🧭</div><h4>规划下一章</h4><p>基于记忆生成大纲与章节名</p></div>
+      <div class="step"><span class="n">5</span><div class="s-ico">✍️</div><h4>注入状态包写作</h4><p>精简状态包保证设定不脱轨</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>🧱 技术架构</h2>
+    <p class="lead">本地优先 · 数据自有 · 密钥安全。</p>
+    <div class="arch">
+      <div class="box"><h4>前端</h4><ul><li>原生 HTML / CSS / JS</li><li>单文件应用，无构建</li><li>工作台：人物 · 章节 · AI 写作 · Agent 助手</li></ul></div>
+      <div class="box"><h4>后端</h4><ul><li>Python 3.10+ / FastAPI</li><li>psycopg3 / uvicorn</li><li>PBKDF2 + HMAC Token 认证</li></ul></div>
+      <div class="box"><h4>数据库</h4><ul><li>PostgreSQL 18 + pgvector</li><li>人物卡 / 章节 / 大纲</li><li>时间线 / 关系图 / 伏笔库</li></ul></div>
+      <div class="box"><h4>LLM</h4><ul><li>智谱 embedding-3（向量化）</li><li>千问 / 智谱 写作模型（可切换）</li><li>API Key 存于本地 .env</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section style="background:var(--bg2)">
+  <div class="wrap">
+    <h2>🚀 快速开始</h2>
+    <p class="lead">本地运行，5 分钟跑起来。</p>
+    <ol class="steps">
+      <li>准备 <code>Python 3.10+</code>、<code>PostgreSQL 18</code>（含 pgvector）、智谱 API Key</li>
+      <li>克隆仓库：<code>git clone https://github.com/furthermoreover/ai-novel-assistant.git</code></li>
+      <li>复制 <code>.env.example</code> 为 <code>.env</code> 并填入密钥</li>
+      <li>Windows 双击 <code>start.bat</code> 一键启动；或 <code>python -m uvicorn backend.main:app --port 8000</code></li>
+      <li>浏览器打开 <code>http://127.0.0.1:8000</code>，注册账号开始创作</li>
+    </ol>
+    <p style="color:var(--muted);font-size:13px;margin-top:18px">详细说明见仓库 <a href="https://github.com/furthermoreover/ai-novel-assistant#readme" target="_blank" rel="noopener">README</a>。⚠️ 请勿将 <code>.env</code> 提交到仓库，密钥永不公开。</p>
+  </div>
+</section>
+
+<footer>
+  <p>AI 小说创作助手 · MIT License · 用 ❤️ 和 🐍 构建</p>
+</footer>
+
+</body>
+</html>
