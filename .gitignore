@@ -26,3 +26,7 @@ Thumbs.db
 
 # 运行时
 nohup.out
+
+# 推送辅助目录（转码副本与 manifest 清单，勿提交）
+.push_tmp/
+.push_manifests/
