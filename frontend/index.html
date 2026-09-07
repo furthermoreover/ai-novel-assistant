@@ -6,8 +6,21 @@
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <title>AI 小说创作助手</title>
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
+<script>
+/* 主题预加载：在样式生效前应用已保存的自定义配色，避免刷新闪烁 */
+(function(){
+  try{
+    var t = JSON.parse(localStorage.getItem('novel_theme') || 'null');
+    if (t && t.vars) {
+      var st = document.documentElement.style;
+      for (var k in t.vars) st.setProperty('--' + k, t.vars[k]);
+      if (t.key) document.documentElement.setAttribute('data-theme', t.key);
+    }
+  }catch(e){}
+})();
+</script>
 <style>
-/* ============ 设计令牌：墨色书卷 × 玄幻星海 ============ */
+/* ============ 设计令牌：墨色书卷 × 玄幻星海（支持主题定制） ============ */
 :root{
   --bg:#0c0e12; --card:#11141a; --card2:#161a22; --card3:#1b202a;
   --border:rgba(239,233,216,.12); --border-soft:rgba(239,233,216,.07);
@@ -16,6 +29,8 @@
   --jade:#5c9c8c; --jade-soft:rgba(92,156,140,.14);
   --gold:#c9a24b; --gold-soft:rgba(201,162,75,.16);
   --success:#4f9d74; --warn:#c9a24b; --danger:#c8483c;
+  --nav-bg:rgba(12,14,18,.85);
+  --star-gold:rgba(201,162,75,.10); --star-jade:rgba(92,156,140,.09);
   --serif:"Noto Serif SC","Songti SC","SimSun",serif;
   --sans:"Noto Sans SC","Microsoft YaHei","PingFang SC",sans-serif;
 }
@@ -28,11 +43,11 @@ body{
 body::before{
   content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:
-    radial-gradient(1px 1px at 15% 20%, rgba(201,162,75,.10) 50%, transparent 51%),
-    radial-gradient(1px 1px at 80% 10%, rgba(201,162,75,.08) 50%, transparent 51%),
-    radial-gradient(1px 1px at 30% 75%, rgba(92,156,140,.09) 50%, transparent 51%),
-    radial-gradient(1px 1px at 88% 60%, rgba(201,162,75,.08) 50%, transparent 51%),
-    radial-gradient(1px 1px at 55% 90%, rgba(92,156,140,.07) 50%, transparent 51%);
+    radial-gradient(1px 1px at 15% 20%, var(--star-gold) 50%, transparent 51%),
+    radial-gradient(1px 1px at 80% 10%, var(--star-gold) 50%, transparent 51%),
+    radial-gradient(1px 1px at 30% 75%, var(--star-jade) 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 60%, var(--star-gold) 50%, transparent 51%),
+    radial-gradient(1px 1px at 55% 90%, var(--star-jade) 50%, transparent 51%);
 }
 a{color:inherit;text-decoration:none}
 button{cursor:pointer;border:none;background:none;color:inherit;font:inherit}
@@ -56,7 +71,7 @@ select{cursor:pointer}
 /* ============ 顶部导航 ============ */
 .navbar{
   display:flex;align-items:center;justify-content:space-between;gap:16px;
-  padding:12px 26px;background:rgba(12,14,18,.85);backdrop-filter:blur(10px);
+  padding:12px 26px;background:var(--nav-bg);backdrop-filter:blur(10px);
   border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;
 }
 .nav-brand{display:flex;align-items:center;gap:12px;font-family:var(--serif);font-size:17px;font-weight:700;letter-spacing:.06em;color:var(--paper)}
@@ -325,6 +340,9 @@ label{font-size:12.5px;color:var(--muted);display:block;margin-bottom:6px;letter
     <a class="nav-link" data-page="knowledge" href="#knowledge">知识库</a>
   </div>
   <div class="nav-auth" id="nav-auth"></div>
+  <button class="btn btn-outline btn-sm" onclick="openThemeModal()" title="自定义主题配色" style="flex-shrink:0">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-1.2-.5-2.2-1.3-2.9-1-1 2.3-6.1-7.7-6.1z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="8" r="1.2"/><circle cx="8" cy="14.5" r="1.2"/></svg>主题
+  </button>
 </nav>
 
 <!-- ===== 项目列表页 ===== -->
@@ -655,6 +673,22 @@ label{font-size:12.5px;color:var(--muted);display:block;margin-bottom:6px;letter
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('modal-auth')">取消</button>
       <button class="btn btn-primary" id="btn-auth" onclick="submitAuth()">登 录</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 主题设置弹窗 ===== -->
+<div class="modal-overlay" id="modal-theme">
+  <div class="modal" style="max-width:560px">
+    <h3>主题配色</h3>
+    <div class="section-label">预设主题</div>
+    <div class="theme-presets" id="theme-presets" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px"></div>
+    <div class="section-label">自定义色板（实时生效）</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="theme-custom"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="resetTheme()">恢复默认</button>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn btn-primary" onclick="closeModal('modal-theme')">完成</button>
     </div>
   </div>
 </div>
@@ -1562,6 +1596,204 @@ async function initAuth() {
     const h = location.hash.replace('#','');
     if (h === 'skills' || h === 'knowledge') navigate(h);
   }
+}
+
+// ============ 主题定制 ============
+const THEMES = {
+  ink: { name:'墨色书卷', vars:{
+    bg:'#0c0e12', card:'#11141a', card2:'#161a22', card3:'#1b202a',
+    border:'rgba(239,233,216,.12)', 'border-soft':'rgba(239,233,216,.07)',
+    paper:'#efe9d8', text:'#e4dfd0', muted:'#98917f', dim:'#6f6a5c',
+    cinnabar:'#c8483c', 'cinnabar-2':'#a83a30', 'cinnabar-soft':'rgba(200,72,60,.14)',
+    jade:'#5c9c8c', 'jade-soft':'rgba(92,156,140,.14)',
+    gold:'#c9a24b', 'gold-soft':'rgba(201,162,75,.16)',
+    'nav-bg':'rgba(12,14,18,.85)',
+    'star-gold':'rgba(201,162,75,.10)', 'star-jade':'rgba(92,156,140,.09)'
+  }},
+  celadon: { name:'青瓷烟雨', vars:{
+    bg:'#0d1212', card:'#121818', card2:'#17201f', card3:'#1d2826',
+    border:'rgba(221,230,226,.12)', 'border-soft':'rgba(221,230,226,.07)',
+    paper:'#e8f0ec', text:'#dde6e2', muted:'#94a39e', dim:'#6d7a76',
+    cinnabar:'#3d7a6d', 'cinnabar-2':'#2f5f55', 'cinnabar-soft':'rgba(61,122,109,.16)',
+    jade:'#6fa8a0', 'jade-soft':'rgba(111,168,160,.15)',
+    gold:'#b8a06a', 'gold-soft':'rgba(184,160,106,.16)',
+    'nav-bg':'rgba(13,18,18,.85)',
+    'star-gold':'rgba(184,160,106,.10)', 'star-jade':'rgba(111,168,160,.10)'
+  }},
+  gold: { name:'鎏金夜宴', vars:{
+    bg:'#0e0d0a', card:'#151310', card2:'#1b1814', card3:'#221f19',
+    border:'rgba(236,228,207,.12)', 'border-soft':'rgba(236,228,207,.07)',
+    paper:'#f2e9d2', text:'#ece4cf', muted:'#a89d83', dim:'#7c735f',
+    cinnabar:'#c9a24b', 'cinnabar-2':'#a5853c', 'cinnabar-soft':'rgba(201,162,75,.16)',
+    jade:'#8a9a6b', 'jade-soft':'rgba(138,154,107,.14)',
+    gold:'#d9b45f', 'gold-soft':'rgba(217,180,95,.18)',
+    'nav-bg':'rgba(14,13,10,.85)',
+    'star-gold':'rgba(217,180,95,.10)', 'star-jade':'rgba(138,154,107,.08)'
+  }},
+  violet: { name:'绛紫玄夜', vars:{
+    bg:'#0d0b12', card:'#141019', card2:'#1a1521', card3:'#211b2a',
+    border:'rgba(226,220,240,.12)', 'border-soft':'rgba(226,220,240,.07)',
+    paper:'#efeaf8', text:'#e2dcf0', muted:'#9c94b0', dim:'#736c86',
+    cinnabar:'#8e5a9e', 'cinnabar-2':'#70447f', 'cinnabar-soft':'rgba(142,90,158,.18)',
+    jade:'#6f7fb8', 'jade-soft':'rgba(111,127,184,.15)',
+    gold:'#c9a24b', 'gold-soft':'rgba(201,162,75,.16)',
+    'nav-bg':'rgba(13,11,18,.85)',
+    'star-gold':'rgba(201,162,75,.10)', 'star-jade':'rgba(111,127,184,.10)'
+  }},
+  crimson: { name:'赤焰燃夜', vars:{
+    bg:'#120c0c', card:'#181011', card2:'#1e1516', card3:'#251b1c',
+    border:'rgba(240,226,221,.12)', 'border-soft':'rgba(240,226,221,.07)',
+    paper:'#f7ece7', text:'#f0e2dd', muted:'#a8928b', dim:'#7d6b65',
+    cinnabar:'#e0524a', 'cinnabar-2':'#b54039', 'cinnabar-soft':'rgba(224,82,74,.16)',
+    jade:'#4f9d74', 'jade-soft':'rgba(79,157,116,.14)',
+    gold:'#d9a05f', 'gold-soft':'rgba(217,160,95,.16)',
+    'nav-bg':'rgba(18,12,12,.85)',
+    'star-gold':'rgba(217,160,95,.10)', 'star-jade':'rgba(79,157,116,.09)'
+  }},
+  paper: { name:'素笺明窗', vars:{
+    bg:'#f5f1e6', card:'#fbf8ef', card2:'#f2ede0', card3:'#eae3d2',
+    border:'rgba(58,52,40,.16)', 'border-soft':'rgba(58,52,40,.09)',
+    paper:'#2c2620', text:'#3a3428', muted:'#7a7262', dim:'#9c9484',
+    cinnabar:'#b04038', 'cinnabar-2':'#8f332d', 'cinnabar-soft':'rgba(176,64,56,.12)',
+    jade:'#3f7a6a', 'jade-soft':'rgba(63,122,106,.12)',
+    gold:'#a8853a', 'gold-soft':'rgba(168,133,58,.14)',
+    'nav-bg':'rgba(250,247,238,.9)',
+    'star-gold':'rgba(168,133,58,.14)', 'star-jade':'rgba(63,122,106,.12)'
+  }}
+};
+const THEME_CUSTOM_FIELDS = [
+  { key:'cinnabar', label:'主色' },
+  { key:'gold', label:'鎏金' },
+  { key:'jade', label:'玉青' },
+  { key:'bg', label:'背景' },
+  { key:'card', label:'卡片' },
+  { key:'text', label:'正文' },
+];
+
+function cssVar(name){
+  return getComputedStyle(document.documentElement).getPropertyValue('--' + name).trim() || '';
+}
+function currentThemeKey(){
+  return document.documentElement.getAttribute('data-theme') || 'ink';
+}
+function saveTheme(key, vars){
+  localStorage.setItem('novel_theme', JSON.stringify({ key: key, vars: vars }));
+  document.documentElement.setAttribute('data-theme', key);
+}
+
+function openThemeModal(){
+  renderThemeModal();
+  openModal('modal-theme');
+}
+
+function renderThemeModal(){
+  renderThemePresets();
+  const custom = document.getElementById('theme-custom');
+  custom.innerHTML = THEME_CUSTOM_FIELDS.map(f=>`
+    <div>
+      <label style="display:flex;justify-content:space-between;align-items:center;gap:6px">${f.label}
+        <span style="font-family:Consolas,monospace;font-size:11px;color:var(--dim)">${cssVar(f.key)}</span>
+      </label>
+      <input type="color" value="${cssVar(f.key) || '#888888'}" data-key="${f.key}"
+        style="width:100%;height:34px;padding:2px;border-radius:6px;cursor:pointer;background:var(--card2)"
+        oninput="onCustomColor(this)">
+    </div>`).join('');
+}
+
+function renderThemePresets(){
+  const cur = currentThemeKey();
+  const presets = document.getElementById('theme-presets');
+  presets.innerHTML = Object.keys(THEMES).map(k=>{
+    const t = THEMES[k];
+    const active = cur === k;
+    return `<button class="theme-preset" style="
+      background:linear-gradient(160deg,${t.vars.card},${t.vars.bg});
+      border:1px solid ${active ? 'var(--cinnabar)' : 'var(--border)'};
+      border-radius:8px;padding:12px;cursor:pointer;text-align:left;transition:.2s;
+      color:${t.vars.text};display:flex;flex-direction:column;gap:8px;width:100%"
+      onclick="pickTheme('${k}')">
+      <span style="font-family:var(--serif);font-size:13px;font-weight:700;color:${t.vars.paper}">${t.name}</span>
+      <span style="display:flex;gap:5px">
+        <i style="width:14px;height:14px;border-radius:50%;background:${t.vars.cinnabar};display:inline-block"></i>
+        <i style="width:14px;height:14px;border-radius:50%;background:${t.vars.gold};display:inline-block"></i>
+        <i style="width:14px;height:14px;border-radius:50%;background:${t.vars.jade};display:inline-block"></i>
+        <i style="width:14px;height:14px;border-radius:50%;background:${t.vars.bg};display:inline-block;border:1px solid rgba(128,128,128,.35)"></i>
+      </span>
+      ${active ? '<span style="font-size:11px;color:var(--cinnabar)">● 使用中</span>' : ''}
+    </button>`;
+  }).join('');
+}
+
+function applyThemeVars(vars, key){
+  const st = document.documentElement.style;
+  for (const k in vars) st.setProperty('--' + k, vars[k]);
+  saveTheme(key, vars);
+  renderThemePresets();
+}
+
+function pickTheme(key){
+  applyThemeVars(THEMES[key].vars, key);
+  toast('已应用主题：' + THEMES[key].name, 'success');
+}
+
+// 拖拽取色时只更新变量与标签，不重建色板避免失焦
+function onCustomColor(el){
+  const k = el.getAttribute('data-key');
+  const st = document.documentElement.style;
+  st.setProperty('--' + k, el.value);
+  const vars = collectThemeVars();
+  for (const v in vars) st.setProperty('--' + v, vars[v]);
+  saveTheme('custom', vars);
+  const lab = el.parentElement.querySelector('span');
+  if (lab) lab.textContent = el.value;
+  renderThemePresets();
+}
+
+// 从 6 个基础色自动派生全部相关变量，保证亮色/任意配色下界面仍协调
+function collectThemeVars(){
+  const base = {};
+  THEME_CUSTOM_FIELDS.forEach(f => { base[f.key] = cssVar(f.key); });
+  const { cinnabar, gold, jade, bg, card, text } = base;
+  return {
+    cinnabar: cinnabar, gold: gold, jade: jade, bg: bg, card: card, text: text,
+    'cinnabar-2': shade(cinnabar, -0.18),
+    'cinnabar-soft': hexA(cinnabar, .14),
+    'gold-soft': hexA(gold, .16),
+    'jade-soft': hexA(jade, .14),
+    card2: shade(card, .05),
+    card3: shade(card, .10),
+    'border': hexA(text, .12),
+    'border-soft': hexA(text, .07),
+    'nav-bg': hexA(bg, .85),
+    'star-gold': hexA(gold, .10),
+    'star-jade': hexA(jade, .09)
+  };
+}
+
+function hexA(hex, a){
+  const rgb = hexToRgb(hex);
+  return rgb ? 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + a + ')' : 'rgba(128,128,128,' + a + ')';
+}
+function shade(hex, ratio){
+  const rgb = hexToRgb(hex);
+  if (!rgb) return '#808080';
+  const t = ratio < 0 ? 0 : 255;
+  const p = Math.abs(ratio);
+  return '#' + rgb.map(v => Math.round(v + (t - v) * p).toString(16).padStart(2, '0')).join('');
+}
+function hexToRgb(hex){
+  hex = String(hex || '').replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  if (hex.length !== 6) return null;
+  const n = parseInt(hex, 16);
+  if (isNaN(n)) return null;
+  return [n >> 16 & 255, n >> 8 & 255, n & 255];
+}
+
+function resetTheme(){
+  applyThemeVars(THEMES.ink.vars, 'ink');
+  renderThemeModal();
+  toast('已恢复默认主题（墨色书卷）', 'success');
 }
 
 // ============ 初始化 ============
