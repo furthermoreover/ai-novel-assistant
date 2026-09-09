@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """小说业务服务：项目管理、大纲、人物、章节、AI 写作"""
+import io
 import os
 import re
 import uuid
@@ -585,3 +586,65 @@ def summarize_chapter(pid: str, cid: str) -> dict:
 
 def list_skills() -> list[dict]:
     return WRITING_SKILLS
+
+
+# ---------- 导出 ----------
+def export_project(pid: str, fmt: str = "md", chapter_from: int | None = None, chapter_to: int | None = None) -> dict:
+    """批量导出小说：fmt 支持 md / txt / docx；chapter_from / chapter_to 限定范围（全部导出时省略）。
+
+    返回 {"filename": str, "text": str}（md/txt）或 {"filename": str, "bytes": bytes}（docx）。
+    """
+    chapters = list_chapters(pid)["items"]
+    selected = []
+    for c in chapters:
+        n = c["chapter_number"]
+        if chapter_from is not None and n < chapter_from:
+            continue
+        if chapter_to is not None and n > chapter_to:
+            continue
+        selected.append(c)
+    if not selected:
+        raise ValueError("所选范围内没有可导出的章节")
+
+    project = get_project(pid)
+    title = ((project or {}).get("title") or "小说").strip() or "小说"
+    fmt = (fmt or "md").lower()
+
+    if fmt == "docx":
+        try:
+            from docx import Document
+        except ImportError:
+            raise ValueError("导出 docx 需要安装 python-docx（pip install python-docx）")
+        doc = Document()
+        doc.add_heading(title, 0)
+        for c in selected:
+            doc.add_heading(_export_chapter_head(c), level=1)
+            doc.add_paragraph(c["content"] or "")
+        buf = io.BytesIO()
+        doc.save(buf)
+        return {"filename": f"{title}.docx", "bytes": buf.getvalue()}
+
+    # txt / md：按章节顺序拼接
+    parts = []
+    if fmt == "md":
+        parts.append(f"# {title}")
+    else:
+        parts.append(title)
+        parts.append("=" * len(title))
+    for c in selected:
+        head = _export_chapter_head(c)
+        if fmt == "md":
+            parts.append(f"## {head}")
+        else:
+            parts.append(head)
+        parts.append(c["content"] or "")
+    text = "\n\n".join(parts)
+    return {"filename": f"{title}.{fmt}", "text": text}
+
+
+def _export_chapter_head(c: dict) -> str:
+    """章节标题：若标题已带「第X章/回」前缀则原样使用，否则自动补章号，避免导出重复"""
+    t = (c.get("title") or "").strip()
+    if re.match(r"^第[0-9一二三四五六七八九十百千万零〇]+[章回节卷]", t):
+        return t
+    return f"第{c['chapter_number']}章 {t}"

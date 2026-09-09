@@ -3,10 +3,11 @@
 import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from fastapi import FastAPI, HTTPException, Depends, Header
+from urllib.parse import quote
+from fastapi import FastAPI, HTTPException, Depends, Header, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
 from config import FRONTEND_DIR, SERVER_HOST, SERVER_PORT
@@ -248,6 +249,59 @@ def api_import_chapters(pid: str, body: dict, user: dict = Depends(get_current_u
     guard_project(pid, user)
     content = (body or {}).get("content", "")
     return service.import_chapters(pid, content)
+
+@app.post("/api/projects/{pid}/chapters/import-files")
+async def api_import_files(pid: str, files: list[UploadFile] = File(...), user: dict = Depends(get_current_user)):
+    """批量导入：一次上传多个文件（.txt/.md/.docx），每个文件按章节标题拆分导入"""
+    guard_project(pid, user)
+    results = []
+    total = 0
+    for f in files:
+        name = f.filename or "未命名"
+        ext = (name.rsplit(".", 1)[-1] if "." in name else "").lower()
+        try:
+            raw = await f.read()
+            if ext == "docx":
+                import io
+                from docx import Document
+                doc = Document(io.BytesIO(raw))
+                lines = [p.text for p in doc.paragraphs]
+                for tb in doc.tables:
+                    for row in tb.rows:
+                        for cell in row.cells:
+                            lines.append(cell.text)
+                text = "\n".join(lines)
+            else:
+                text = raw.decode("utf-8", errors="replace")
+            res = service.import_chapters(pid, text)
+            results.append({"file": name, "imported": res["imported"], "message": res["message"]})
+            total += res["imported"]
+        except Exception as e:
+            results.append({"file": name, "imported": 0, "message": f"导入失败: {e}"})
+    return {"results": results, "total_imported": total}
+
+@app.get("/api/projects/{pid}/export")
+def api_export(pid: str, fmt: str = "md", chapter_from: int | None = None,
+               chapter_to: int | None = None, user: dict = Depends(get_current_user)):
+    """批量导出小说：fmt=md|txt|docx；chapter_from / chapter_to 限定范围（默认全部）"""
+    guard_project(pid, user)
+    try:
+        data = service.export_project(pid, fmt, chapter_from, chapter_to)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    filename = quote(data["filename"])
+    if (fmt or "md").lower() == "docx":
+        return Response(
+            content=data["bytes"],
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
+        )
+    media = "text/markdown; charset=utf-8" if (fmt or "md").lower() == "md" else "text/plain; charset=utf-8"
+    return Response(
+        content=data["text"],
+        media_type=media,
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
+    )
 
 @app.get("/api/projects/{pid}/chapters/{cid}")
 def api_chapter(pid: str, cid: str, user: dict = Depends(get_current_user)):
