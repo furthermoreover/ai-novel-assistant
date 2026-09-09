@@ -11,7 +11,9 @@
 import json
 import os
 import re
+import threading
 import uuid
+from datetime import datetime, timezone
 
 from db import get_conn
 from ai import chat_completion
@@ -75,7 +77,7 @@ def analyze_chapter(pid: str, cid: str, force: bool = False) -> dict:
     )
     raw = chat_completion(
         [{"role": "system", "content": system}, {"role": "user", "content": user}],
-        model=SUMMARIZE_MODEL, temperature=0.2, max_tokens=4096,
+        model=SUMMARIZE_MODEL, temperature=0.2, max_tokens=2048,
     )
     analysis = _clean_json(raw)
 
@@ -98,6 +100,12 @@ def _existing_memory_text(pid: str) -> str:
 
 
 # ---------- 2. 应用分析结果到数据库 ----------
+# 全量同步并发分析时，写库必须串行化：
+#   LLM 调用（慢）可并行；apply_analysis 的"查重→写入"必须在同一把锁内串行，
+#   否则两个线程会同时 SELECT 到"角色不存在"再各自 INSERT，产生重复人物卡。
+_APPLY_LOCK = threading.Lock()
+
+
 def apply_analysis(pid: str, cid: str, analysis: dict) -> dict:
     """把分析 JSON 增量合并进数据库，返回各项处理计数"""
     if not isinstance(analysis, dict):
@@ -109,156 +117,154 @@ def apply_analysis(pid: str, cid: str, analysis: dict) -> dict:
     counts = {"characters": 0, "world": 0, "relationships": 0,
               "foreshadowing_planted": 0, "foreshadowing_resolved": 0, "timeline": 0}
 
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            # --- 人物卡更新/创建 ---
-            for ch in analysis.get("characters", []) or []:
-                name = (ch.get("name") or "").strip()
-                if not name:
-                    continue
-                status = (ch.get("current_status") or "").strip()
-                motivation = (ch.get("motivation") or "").strip()
-                new_info = (ch.get("new_info") or "").strip()
-                # 查找现有角色
-                cur.execute("SELECT id FROM novel_character WHERE project_id=%s AND name=%s", (pid, name))
-                row = cur.fetchone()
-                if row:
-                    sets, params = ["_updated_at=CURRENT_TIMESTAMP"], []
-                    if status:
-                        sets.append("current_status=%s"); params.append(status)
-                    if motivation:
-                        sets.append("motivation=%s"); params.append(motivation)
-                    if new_info:
-                        cur.execute("SELECT other_info FROM novel_character WHERE id=%s", (row["id"],))
-                        old = (cur.fetchone() or {}).get("other_info") or ""
-                        merged = f"{old}\n【第{num}章】{new_info}".strip() if old.strip() else f"【第{num}章】{new_info}"
-                        sets.append("other_info=%s"); params.append(merged)
-                    sets.append("last_appearance_chapter=%s"); params.append(num)
-                    params += [row["id"]]
-                    cur.execute(f"UPDATE novel_character SET {', '.join(sets)} WHERE id=%s", params)
-                else:
-                    cid_new = str(uuid.uuid4())
+    with _APPLY_LOCK:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                # --- 人物卡更新/创建 ---
+                for ch in analysis.get("characters", []) or []:
+                    name = (ch.get("name") or "").strip()
+                    if not name:
+                        continue
+                    status = (ch.get("current_status") or "").strip()
+                    motivation = (ch.get("motivation") or "").strip()
+                    new_info = (ch.get("new_info") or "").strip()
+                    # 查找现有角色
+                    cur.execute("SELECT id FROM novel_character WHERE project_id=%s AND name=%s", (pid, name))
+                    row = cur.fetchone()
+                    if row:
+                        sets, params = ["_updated_at=CURRENT_TIMESTAMP"], []
+                        if status:
+                            sets.append("current_status=%s"); params.append(status)
+                        if motivation:
+                            sets.append("motivation=%s"); params.append(motivation)
+                        if new_info:
+                            cur.execute("SELECT other_info FROM novel_character WHERE id=%s", (row["id"],))
+                            old = (cur.fetchone() or {}).get("other_info") or ""
+                            merged = f"{old}\n【第{num}章】{new_info}".strip() if old.strip() else f"【第{num}章】{new_info}"
+                            sets.append("other_info=%s"); params.append(merged)
+                        sets.append("last_appearance_chapter=%s"); params.append(num)
+                        params += [row["id"]]
+                        cur.execute(f"UPDATE novel_character SET {', '.join(sets)} WHERE id=%s", params)
+                    else:
+                        cid_new = str(uuid.uuid4())
+                        cur.execute(
+                            """INSERT INTO novel_character
+                               (id, project_id, name, current_status, motivation, other_info, last_appearance_chapter)
+                               VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                            (cid_new, pid, name, status or "", motivation or "",
+                             f"【第{num}章】首次登场：{new_info}" if new_info else f"【第{num}章】首次登场", num),
+                        )
+                    counts["characters"] += 1
+
+                # --- 世界设定（追加到 outline.world_setting） ---
+                world_updates = analysis.get("world_updates", []) or []
+                if world_updates:
+                    cur.execute("SELECT world_setting FROM novel_outline WHERE project_id=%s", (pid,))
+                    row = cur.fetchone()
+                    old_ws = (row or {}).get("world_setting") or ""
+                    additions = []
+                    for w in world_updates:
+                        cat = w.get("category") or "其他"
+                        item = (w.get("item") or "").strip()
+                        update = (w.get("update") or "").strip()
+                        if item and update:
+                            additions.append(f"【第{num}章·{cat}】{item}：{update}")
+                    if additions:
+                        new_ws = (old_ws.rstrip() + "\n\n" + "\n".join(additions)) if old_ws.strip() else "\n".join(additions)
+                        cur.execute("UPDATE novel_outline SET world_setting=%s, _updated_at=CURRENT_TIMESTAMP WHERE project_id=%s", (new_ws, pid))
+                        counts["world"] = len(additions)
+
+                # --- 人物关系（upsert） ---
+                for r in analysis.get("relationships", []) or []:
+                    a = (r.get("char_a") or "").strip()
+                    b = (r.get("char_b") or "").strip()
+                    if not a or not b or a == b:
+                        continue
+                    key_a, key_b = sorted([a, b])
+                    relation = (r.get("relation") or "").strip()
+                    sentiment = r.get("sentiment") or "neutral"
+                    trend = r.get("trend") or "stable"
+                    note = (r.get("note") or "").strip()
                     cur.execute(
-                        """INSERT INTO novel_character
-                           (id, project_id, name, current_status, motivation, other_info, last_appearance_chapter)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s)""",
-                        (cid_new, pid, name, status or "", motivation or "",
-                         f"【第{num}章】首次登场：{new_info}" if new_info else f"【第{num}章】首次登场", num),
+                        """INSERT INTO novel_relationship
+                           (project_id, char_a, char_b, relation, sentiment, trend, last_change_chapter, note)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                           ON CONFLICT (project_id, char_a, char_b)
+                           DO UPDATE SET relation=EXCLUDED.relation,
+                                         sentiment=EXCLUDED.sentiment,
+                                         trend=EXCLUDED.trend,
+                                         last_change_chapter=EXCLUDED.last_change_chapter,
+                                         note=EXCLUDED.note,
+                                         _updated_at=CURRENT_TIMESTAMP""",
+                        (pid, key_a, key_b, relation, sentiment, trend, num, note),
                     )
-                counts["characters"] += 1
+                    counts["relationships"] += 1
 
-            # --- 世界设定（追加到 outline.world_setting） ---
-            world_updates = analysis.get("world_updates", []) or []
-            if world_updates:
-                cur.execute("SELECT world_setting FROM novel_outline WHERE project_id=%s", (pid,))
-                row = cur.fetchone()
-                old_ws = (row or {}).get("world_setting") or ""
-                additions = []
-                for w in world_updates:
-                    cat = w.get("category") or "其他"
-                    item = (w.get("item") or "").strip()
-                    update = (w.get("update") or "").strip()
-                    if item and update:
-                        additions.append(f"【第{num}章·{cat}】{item}：{update}")
-                if additions:
-                    new_ws = (old_ws.rstrip() + "\n\n" + "\n".join(additions)) if old_ws.strip() else "\n".join(additions)
-                    cur.execute("UPDATE novel_outline SET world_setting=%s, _updated_at=CURRENT_TIMESTAMP WHERE project_id=%s", (new_ws, pid))
-                    counts["world"] = len(additions)
-
-            # --- 人物关系（upsert） ---
-            for r in analysis.get("relationships", []) or []:
-                a = (r.get("char_a") or "").strip()
-                b = (r.get("char_b") or "").strip()
-                if not a or not b or a == b:
-                    continue
-                key_a, key_b = sorted([a, b])
-                relation = (r.get("relation") or "").strip()
-                sentiment = r.get("sentiment") or "neutral"
-                trend = r.get("trend") or "stable"
-                note = (r.get("note") or "").strip()
-                cur.execute(
-                    """INSERT INTO novel_relationship
-                       (project_id, char_a, char_b, relation, sentiment, trend, last_change_chapter, note)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-                       ON CONFLICT (project_id, char_a, char_b)
-                       DO UPDATE SET relation=EXCLUDED.relation,
-                                     sentiment=EXCLUDED.sentiment,
-                                     trend=EXCLUDED.trend,
-                                     last_change_chapter=EXCLUDED.last_change_chapter,
-                                     note=EXCLUDED.note,
-                                     _updated_at=CURRENT_TIMESTAMP""",
-                    (pid, key_a, key_b, relation, sentiment, trend, num, note),
-                )
-                counts["relationships"] += 1
-
-            # --- 伏笔：埋设 ---
-            for f in analysis.get("foreshadowing_planted", []) or []:
-                desc = (f.get("description") or "").strip()
-                if not desc:
-                    continue
-                ftype = f.get("type") or "other"
-                imp = f.get("importance") or "medium"
-                cur.execute(
-                    """INSERT INTO novel_foreshadowing
-                       (project_id, description, type, status, planted_chapter, importance)
-                       VALUES (%s,%s,%s,'open',%s,%s)""",
-                    (pid, desc, ftype, num, imp),
-                )
-                counts["foreshadowing_planted"] += 1
-
-            # --- 伏笔：回收（匹配 open 伏笔） ---
-            for f in analysis.get("foreshadowing_resolved", []) or []:
-                desc = (f.get("description") or "").strip()
-                if not desc:
-                    continue
-                cur.execute(
-                    """SELECT id, description FROM novel_foreshadowing
-                       WHERE project_id=%s AND status='open'
-                       ORDER BY _created_at ASC""", (pid,),
-                )
-                candidates = cur.fetchall()
-                words = [w for w in re.split(r"[，。！？、\s：；]", desc) if len(w) >= 2]
-                best = None
-                for cand in candidates:
-                    full = cand.get("description") or ""
-                    if any(w and w in full for w in words[:3]):
-                        best = cand["id"]
-                        break
-                if best:
+                # --- 伏笔：埋设 ---
+                for f in analysis.get("foreshadowing_planted", []) or []:
+                    desc = (f.get("description") or "").strip()
+                    if not desc:
+                        continue
+                    ftype = f.get("type") or "other"
+                    imp = f.get("importance") or "medium"
                     cur.execute(
-                        "UPDATE novel_foreshadowing SET status='resolved', resolved_chapter=%s WHERE id=%s",
-                        (num, best),
+                        """INSERT INTO novel_foreshadowing
+                           (project_id, description, type, status, planted_chapter, importance)
+                           VALUES (%s,%s,%s,'open',%s,%s)""",
+                        (pid, desc, ftype, num, imp),
                     )
-                    counts["foreshadowing_resolved"] += 1
+                    counts["foreshadowing_planted"] += 1
 
-            # --- 时间线 ---
-            location = (analysis.get("location") or "").strip()
-            events = analysis.get("events", []) or []
-            ch_names = [c.get("name") for c in (analysis.get("characters", []) or []) if c.get("name")]
-            if events or location:
-                cur.execute(
-                    """INSERT INTO novel_timeline (project_id, chapter_number, location, events, characters)
-                       VALUES (%s,%s,%s,%s,%s)""",
-                    (pid, num, location, "\n".join(events), ch_names),
-                )
-                counts["timeline"] = 1
-
-            # --- 摘要填充（为空才填） ---
-            if not (chapter.get("summary") or "").strip():
-                summ = (analysis.get("chapter_summary") or "").strip()
-                if summ:
+                # --- 伏笔：回收（匹配 open 伏笔） ---
+                for f in analysis.get("foreshadowing_resolved", []) or []:
+                    desc = (f.get("description") or "").strip()
+                    if not desc:
+                        continue
                     cur.execute(
-                        "UPDATE novel_chapter SET summary=%s, _updated_at=CURRENT_TIMESTAMP WHERE id=%s",
-                        (summ, cid),
+                        """SELECT id, description FROM novel_foreshadowing
+                           WHERE project_id=%s AND status='open'
+                           ORDER BY _created_at ASC""", (pid,),
                     )
-        conn.commit()
+                    candidates = cur.fetchall()
+                    words = [w for w in re.split(r"[，。！？、\s：；]", desc) if len(w) >= 2]
+                    best = None
+                    for cand in candidates:
+                        full = cand.get("description") or ""
+                        if any(w and w in full for w in words[:3]):
+                            best = cand["id"]
+                            break
+                    if best:
+                        cur.execute(
+                            "UPDATE novel_foreshadowing SET status='resolved', resolved_chapter=%s WHERE id=%s",
+                            (num, best),
+                        )
+                        counts["foreshadowing_resolved"] += 1
+
+                # --- 时间线 ---
+                location = (analysis.get("location") or "").strip()
+                events = analysis.get("events", []) or []
+                ch_names = [c.get("name") for c in (analysis.get("characters", []) or []) if c.get("name")]
+                if events or location:
+                    cur.execute(
+                        """INSERT INTO novel_timeline (project_id, chapter_number, location, events, characters)
+                           VALUES (%s,%s,%s,%s,%s)""",
+                        (pid, num, location, "\n".join(events), ch_names),
+                    )
+                    counts["timeline"] = 1
+
+                # --- 摘要填充（为空才填） ---
+                if not (chapter.get("summary") or "").strip():
+                    summ = (analysis.get("chapter_summary") or "").strip()
+                    if summ:
+                        cur.execute(
+                            "UPDATE novel_chapter SET summary=%s, _updated_at=CURRENT_TIMESTAMP WHERE id=%s",
+                            (summ, cid),
+                        )
+            conn.commit()
     return {"applied": counts, "chapter_number": num}
 
 
 # ---------- 3. 全量同步（后台任务 + 进度追踪） ----------
-import threading
-from datetime import datetime, timezone
-
 SYNC_TASKS: dict[str, dict] = {}
 _SYNC_LOCK = threading.Lock()
 
@@ -304,19 +310,34 @@ def start_sync_project(pid: str) -> dict:
 
 
 def _run_sync(pid: str, pending: list[int], task: dict) -> None:
-    """后台线程：逐个分析待同步章节，更新进度"""
+    """后台任务：并发分析待同步章节（默认 3 路），更新进度。
+
+    LLM 调用（主要耗时）并行；写库在 apply_analysis 内由 _APPLY_LOCK 串行化，
+    既提速又避免并发"查重→插入"产生重复人物卡。
+    """
+    import concurrent.futures
+
     try:
         chapters = {c["chapter_number"]: c["id"] for c in service.list_chapters(pid)["items"]}
-        for num in pending:
-            task["current_chapter"] = num
+
+        def work(num: int) -> None:
             cid = chapters.get(num)
+            with _SYNC_LOCK:
+                task["current_chapter"] = num
             try:
                 if cid:
                     analyze_chapter(pid, cid)
-                task["synced"].append(num)
+                with _SYNC_LOCK:
+                    task["synced"].append(num)
             except Exception as e:
-                task["errors"].append(f"第{num}章: {e}")
-            task["done"] += 1
+                with _SYNC_LOCK:
+                    task["errors"].append(f"第{num}章: {e}")
+            finally:
+                with _SYNC_LOCK:
+                    task["done"] += 1
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as ex:
+            list(ex.map(work, pending))
         task["status"] = "done"
     except Exception as e:
         task["status"] = "error"
@@ -481,7 +502,7 @@ def plan_next_chapter(pid: str, instruction: str = "") -> dict:
     title = None
     m = re.search(r"本章标题\s*[（(]建议[）)]\s*[：:]\s*(.+)", plan)
     if m:
-        title = m.group(1).strip().strip("，。,.、\s")
+        title = m.group(1).strip().strip(r"，。,.、\s")
     if not title:
         title = f"第{next_num}章"
     return {"chapter_number": next_num, "title": title, "plan": plan}

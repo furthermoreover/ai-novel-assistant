@@ -224,6 +224,11 @@ def create_chapter(pid: str, title: str, content: str = "", chapter_number: int 
         with conn.cursor() as cur:
             if chapter_number and chapter_number > 0:
                 num = chapter_number
+                # 防重复章号：若该章号已存在（如重复点击"按规划新建章节"），自动顺延到下一个可用编号
+                cur.execute("SELECT 1 FROM novel_chapter WHERE project_id=%s AND chapter_number=%s", (pid, num))
+                if cur.fetchone():
+                    cur.execute("SELECT COALESCE(MAX(chapter_number), 0) + 1 AS n FROM novel_chapter WHERE project_id=%s", (pid,))
+                    num = cur.fetchone()["n"]
             else:
                 cur.execute("SELECT COALESCE(MAX(chapter_number), 0) + 1 AS n FROM novel_chapter WHERE project_id=%s", (pid,))
                 num = cur.fetchone()["n"]
@@ -271,11 +276,95 @@ def update_chapter(pid: str, cid: str, **fields) -> dict | None:
     return row
 
 
-def delete_chapter(pid: str, cid: str) -> None:
+def _purge_chapter_memory(pid: str, num: int) -> None:
+    """删除章节时，级联清理该章在 Agent 记忆库中的残留，防止废稿被记忆：
+    - 剧情时间线：该章记录整条删除
+    - 伏笔：埋设于该章（来源消失）→ 删除；回收于该章（回收事件不存在）→ 恢复为未回收
+    - 角色卡：最近出场章节指向该章 → 置空（角色卡本身保留）
+    """
     with get_conn() as conn:
         with conn.cursor() as cur:
+            cur.execute("DELETE FROM novel_timeline WHERE project_id=%s AND chapter_number=%s", (pid, num))
+            cur.execute("DELETE FROM novel_foreshadowing WHERE project_id=%s AND planted_chapter=%s", (pid, num))
+            cur.execute(
+                "UPDATE novel_foreshadowing SET status='open', resolved_chapter=NULL WHERE project_id=%s AND resolved_chapter=%s",
+                (pid, num),
+            )
+            cur.execute(
+                "UPDATE novel_character SET last_appearance_chapter=NULL WHERE project_id=%s AND last_appearance_chapter=%s",
+                (pid, num),
+            )
+        conn.commit()
+
+
+def delete_chapter(pid: str, cid: str) -> None:
+    num = None
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT chapter_number FROM novel_chapter WHERE project_id=%s AND id=%s", (pid, cid))
+            row = cur.fetchone()
+            num = row["chapter_number"] if row else None
             cur.execute("DELETE FROM novel_chapter WHERE project_id=%s AND id=%s", (pid, cid))
         conn.commit()
+    if num is not None:
+        _purge_chapter_memory(pid, num)
+
+
+def cleanup_orphan_memory(pid: str) -> dict:
+    """清理孤儿记忆：删除/修复指向"已不存在章节"的记忆记录。
+
+    场景：历史版本删除章节时未清理记忆库，导致废稿（如被删的第 29 章）
+    仍残留在时间线/伏笔中。幂等，可安全重复执行。
+    """
+    counts = {"timeline": 0, "foreshadowing_deleted": 0, "foreshadowing_reopened": 0, "characters_fixed": 0}
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT chapter_number FROM novel_chapter WHERE project_id=%s", (pid,))
+            nums = [r["chapter_number"] for r in cur.fetchall()]
+            if nums:
+                cur.execute(
+                    "DELETE FROM novel_timeline WHERE project_id=%s AND NOT (chapter_number = ANY(%s))",
+                    (pid, nums),
+                )
+                counts["timeline"] = cur.rowcount
+                cur.execute(
+                    "DELETE FROM novel_foreshadowing WHERE project_id=%s AND planted_chapter IS NOT NULL AND NOT (planted_chapter = ANY(%s))",
+                    (pid, nums),
+                )
+                counts["foreshadowing_deleted"] = cur.rowcount
+                cur.execute(
+                    "UPDATE novel_foreshadowing SET status='open', resolved_chapter=NULL WHERE project_id=%s AND resolved_chapter IS NOT NULL AND NOT (resolved_chapter = ANY(%s))",
+                    (pid, nums),
+                )
+                counts["foreshadowing_reopened"] = cur.rowcount
+                cur.execute(
+                    "UPDATE novel_character SET last_appearance_chapter=NULL WHERE project_id=%s AND last_appearance_chapter IS NOT NULL AND NOT (last_appearance_chapter = ANY(%s))",
+                    (pid, nums),
+                )
+                counts["characters_fixed"] = cur.rowcount
+            else:
+                # 项目没有任何章节：清空时间线（伏笔无从归属，一并清空）
+                cur.execute("DELETE FROM novel_timeline WHERE project_id=%s", (pid,))
+                counts["timeline"] = cur.rowcount
+                cur.execute("DELETE FROM novel_foreshadowing WHERE project_id=%s", (pid,))
+                counts["foreshadowing_deleted"] = cur.rowcount
+        conn.commit()
+    return counts
+
+
+def cleanup_all_orphan_memory() -> dict:
+    """对所有项目执行孤儿记忆清理（服务启动时调用，幂等）"""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM novel_project")
+            pids = [r["id"] for r in cur.fetchall()]
+    total = {"projects": len(pids), "timeline": 0, "foreshadowing_deleted": 0,
+             "foreshadowing_reopened": 0, "characters_fixed": 0}
+    for pid in pids:
+        c = cleanup_orphan_memory(pid)
+        for k in ("timeline", "foreshadowing_deleted", "foreshadowing_reopened", "characters_fixed"):
+            total[k] += c[k]
+    return total
 
 
 # 章节标题正则：匹配「第X章/回/节/卷 + 标题」
@@ -496,4 +585,3 @@ def summarize_chapter(pid: str, cid: str) -> dict:
 
 def list_skills() -> list[dict]:
     return WRITING_SKILLS
-}

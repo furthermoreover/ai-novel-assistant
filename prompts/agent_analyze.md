@@ -62,7 +62,20 @@
 }
 ```
 
-## 五、铁律
+## 五、输出规模上限（硬约束，违反即不合格）
+
+输出必须精简，token 越少越好，禁止堆砌、禁止复述原文：
+
+- `chapter_summary`：≤80 字，一句话讲清"发生了什么 + 人物动向"。
+- `events`：最多 5 条，每条一句话 ≤20 字。
+- `characters`：只列"本章新登场"或"状态/目标有变化"的角色，最多 6 个；`current_status` ≤40 字；`motivation` 无变化就省略该字段；`new_info` 无新信息就省略该字段。
+- `world_updates`：最多 3 条，`update` ≤60 字。
+- `relationships`：最多 5 条，`note` 无变化就省略。
+- `foreshadowing_planted` / `foreshadowing_resolved`：最多各 3 条，每条 ≤40 字。
+- `next_hooks`：最多 3 条，每条 ≤30 字。
+- 全 JSON 控制在 1500 token 以内：用短语和短句，不要解释性语言，不要输出与字段无关的内容。
+
+## 六、铁律
 
 - 只输出 JSON，不要输出 JSON 之外任何内容。
 - JSON 键名必须与模板完全一致；空数组用 []，不要省略键。

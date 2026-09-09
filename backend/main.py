@@ -460,6 +460,12 @@ def index():
 @app.on_event("startup")
 def startup():
     ensure_tables()
+    # 清理历史孤儿记忆（删除章节但残留的记忆记录，如废稿章）
+    try:
+        cleaned = service.cleanup_all_orphan_memory()
+        print(f"[启动] 孤儿记忆清理完成: {cleaned}")
+    except Exception as e:
+        print(f"[启动] 孤儿记忆清理失败（不影响服务）: {e}")
     if is_knowledge_empty():
         result = import_knowledge()
         print(f"[启动] 知识库为空，自动导入完成: {result}")
