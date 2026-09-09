@@ -51,8 +51,7 @@ body::before{
 }
 a{color:inherit;text-decoration:none}
 button{cursor:pointer;border:none;background:none;color:inherit;font:inherit}
-input,textarea,select{
-  background:var(--card2);border:1px solid var(--border);color:var(--text);
+input,textarea,select{background:var(--card2);border:1px solid var(--border);color:var(--text);
   border-radius:6px;padding:9px 13px;font:inherit;outline:none;transition:border-color .2s, box-shadow .2s;
 }
 input::placeholder,textarea::placeholder{color:var(--dim)}
@@ -397,7 +396,10 @@ label{font-size:12.5px;color:var(--muted);display:block;margin-bottom:6px;letter
         <svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>新建章节
       </button>
       <button class="btn btn-outline btn-sm" onclick="openImportModal()">
-        <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>导入已有小说
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>批量导入
+      </button>
+      <button class="btn btn-outline btn-sm" onclick="openExportModal()">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 15V3M7 10l5 5 5-5M5 21h14"/></svg>导出
       </button>
     </div>
     <div id="chapter-list"></div>
@@ -596,24 +598,56 @@ label{font-size:12.5px;color:var(--muted);display:block;margin-bottom:6px;letter
   </div>
 </div>
 
-<!-- ===== 导入已有小说弹窗 ===== -->
+<!-- ===== 批量导入弹窗 ===== -->
 <div class="modal-overlay" id="modal-import">
   <div class="modal">
-    <h3>导入已有小说</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.9">支持 .txt / .md 文件或直接粘贴文本，自动按「第X章/回/节」标题拆分导入为章节。<br>导入后 AI 续写时会自动读取最近章节，保持剧情连贯。</p>
+    <h3>批量导入已有小说</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.9">支持一次选择多个 .txt / .md / .docx 文件，每个文件自动按「第X章/回/节」标题拆分导入为章节；也可以直接粘贴文本。<br>导入后 AI 续写时会自动读取最近章节，保持剧情连贯。</p>
     <div class="form-row">
       <div>
-        <label>选择文件</label>
-        <input type="file" id="import-file" accept=".txt,.md" style="padding:8px">
+        <label>选择文件（可多选）</label>
+        <input type="file" id="import-file" accept=".txt,.md,.docx" multiple style="padding:8px">
       </div>
     </div>
+    <div id="import-files" style="font-size:13px;color:var(--muted);margin:2px 0 10px;line-height:1.8"></div>
     <div style="text-align:center;color:var(--dim);font-size:13px;margin:6px 0 12px;letter-spacing:.2em">— 或 —</div>
-    <div class="form-row"><div><label>粘贴小说全文</label><textarea id="import-content" rows="14" placeholder="粘贴你的小说全文，包含章节标题（如：第一章 xxx）"></textarea></div></div>
-    <div id="import-preview" style="font-size:13px;color:var(--gold);margin-bottom:8px"></div>
+    <div class="form-row"><div><label>粘贴小说全文</label><textarea id="import-content" rows="10" placeholder="粘贴你的小说全文，包含章节标题（如：第一章 xxx）"></textarea></div></div>
+    <div id="import-preview" style="font-size:13px;color:var(--gold);margin-bottom:8px;white-space:pre-wrap;line-height:1.8"></div>
     <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeModal('modal-import')">取消</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-import')">关闭</button>
       <button class="btn btn-primary" onclick="doImport()">
-        <svg class="ic" viewBox="0 0 24 24"><path d="M12 15V3M7 10l5 5 5-5M5 21h14"/></svg>拆分导入
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 15V3M7 10l5 5 5-5M5 21h14"/></svg>批量导入
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 导出弹窗 ===== -->
+<div class="modal-overlay" id="modal-export">
+  <div class="modal" style="max-width:440px">
+    <h3>导出小说</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.9">导出全部章节或指定范围，支持 Markdown / Word / 纯文本 三种格式。</p>
+    <div class="form-row"><div><label>导出格式</label>
+      <div class="mode-switch">
+        <button class="mode-btn active" data-fmt="md" onclick="setExportFmt('md',this)">Markdown</button>
+        <button class="mode-btn" data-fmt="docx" onclick="setExportFmt('docx',this)">Word (.docx)</button>
+        <button class="mode-btn" data-fmt="txt" onclick="setExportFmt('txt',this)">纯文本</button>
+      </div>
+    </div></div>
+    <div class="form-row"><div><label>导出范围</label>
+      <div class="mode-switch">
+        <button class="mode-btn active" data-scope="all" onclick="setExportScope('all',this)">全部章节</button>
+        <button class="mode-btn" data-scope="range" onclick="setExportScope('range',this)">指定范围</button>
+      </div>
+    </div></div>
+    <div id="export-range" style="display:none;gap:10px" class="form-row">
+      <div style="flex:1"><label>从第几章</label><input type="number" id="export-from" min="1" placeholder="如：1"></div>
+      <div style="flex:1"><label>到第几章</label><input type="number" id="export-to" min="1" placeholder="如：28"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-export')">取消</button>
+      <button class="btn btn-primary" onclick="downloadExport()">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 15V3M7 10l5 5 5-5M5 21h14"/></svg>导出下载
       </button>
     </div>
   </div>
@@ -1043,21 +1077,22 @@ async function removeChapter(cid) {
   } catch(e) { toast(e.message,'error'); }
 }
 
-// ============ 导入已有小说 ============
+// ============ 批量导入已有小说 ============
 function openImportModal() {
   document.getElementById('import-content').value = '';
   document.getElementById('import-file').value = '';
   document.getElementById('import-preview').textContent = '';
-  document.getElementById('import-file').addEventListener('change', (e)=>{
-    const f = e.target.files[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = ()=> {
-      document.getElementById('import-content').value = reader.result;
-      previewImport();
-    };
-    reader.readAsText(f, 'utf-8');
-  });
+  document.getElementById('import-files').textContent = '';
+  document.getElementById('import-file').onchange = (e)=>{
+    const files = e.target.files;
+    const box = document.getElementById('import-files');
+    if (!files.length) { box.textContent = ''; return; }
+    box.innerHTML = '';
+    for (const f of files) {
+      const kb = (f.size / 1024).toFixed(1);
+      box.innerHTML += `<div>📄 ${esc(f.name)}（${kb} KB）</div>`;
+    }
+  };
   openModal('modal-import');
 }
 
@@ -1072,14 +1107,100 @@ function previewImport() {
 
 async function doImport() {
   if (!currentProject) return;
+  const files = document.getElementById('import-file').files;
   const content = document.getElementById('import-content').value.trim();
-  if (!content) { toast('请先选择文件或粘贴小说内容','error'); return; }
+  if (!files.length && !content) { toast('请先选择文件或粘贴小说内容','error'); return; }
+  const btn = document.querySelector('#modal-import .btn-primary');
+  btn.disabled = true;
   try {
-    const r = await api(`/projects/${currentProject.id}/chapters/import`, 'POST', { content });
-    toast(r.message || `导入 ${r.imported} 章`,'success');
-    closeModal('modal-import');
+    if (files.length) {
+      // 批量导入：多文件一次上传（txt/md/docx）
+      const fd = new FormData();
+      for (const f of files) fd.append('files', f);
+      const token = localStorage.getItem('token');
+      const resp = await fetch(API + `/projects/${currentProject.id}/chapters/import-files`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+        body: fd,
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(()=>({detail:'导入失败'}));
+        throw new Error(err.detail || '导入失败');
+      }
+      const r = await resp.json();
+      const lines = r.results.map(x =>
+        `${x.file}：导入 ${x.imported} 章${x.message.includes('失败') ? '（' + x.message + '）' : ''}`
+      );
+      document.getElementById('import-preview').textContent = lines.join('\n');
+      toast(`批量导入完成：共导入 ${r.total_imported} 章`,'success');
+    } else {
+      const r = await api(`/projects/${currentProject.id}/chapters/import`, 'POST', { content });
+      toast(r.message || `导入 ${r.imported} 章`,'success');
+      document.getElementById('import-content').value = '';
+      document.getElementById('import-preview').textContent = '';
+    }
     loadChapters();
     loadWriteTargets();
+  } catch(e) { toast(e.message,'error'); }
+  finally { btn.disabled = false; }
+}
+
+// ============ 导出小说 ============
+function openExportModal() {
+  document.getElementById('export-from').value = '';
+  document.getElementById('export-to').value = '';
+  document.getElementById('export-range').style.display = 'none';
+  document.querySelectorAll('#modal-export .mode-btn').forEach(b=>{
+    if (b.dataset.fmt && b.dataset.fmt !== 'md') b.classList.remove('active');
+    if (b.dataset.scope && b.dataset.scope !== 'all') b.classList.remove('active');
+  });
+  document.querySelector('#modal-export .mode-btn[data-fmt="md"]').classList.add('active');
+  document.querySelector('#modal-export .mode-btn[data-scope="all"]').classList.add('active');
+  openModal('modal-export');
+}
+
+function setExportFmt(fmt, btn) {
+  document.querySelectorAll('#modal-export .mode-btn[data-fmt]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function setExportScope(scope, btn) {
+  document.querySelectorAll('#modal-export .mode-btn[data-scope]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('export-range').style.display = scope === 'range' ? 'flex' : 'none';
+}
+
+async function downloadExport() {
+  if (!currentProject) return;
+  const fmt = (document.querySelector('#modal-export .mode-btn[data-fmt].active') || {}).dataset?.fmt || 'md';
+  const scope = (document.querySelector('#modal-export .mode-btn[data-scope].active') || {}).dataset?.scope || 'all';
+  let url = `/projects/${currentProject.id}/export?fmt=${fmt}`;
+  if (scope === 'range') {
+    const f = document.getElementById('export-from').value.trim();
+    const t = document.getElementById('export-to').value.trim();
+    if (f) url += `&chapter_from=${encodeURIComponent(f)}`;
+    if (t) url += `&chapter_to=${encodeURIComponent(t)}`;
+  }
+  try {
+    const token = localStorage.getItem('token');
+    const resp = await fetch(API + url, { headers: token ? { 'Authorization': 'Bearer ' + token } : {} });
+    if (!resp.ok) {
+      const err = await resp.json().catch(()=>({detail:'导出失败'}));
+      throw new Error(err.detail || '导出失败');
+    }
+    const blob = await resp.blob();
+    const cd = resp.headers.get('Content-Disposition') || '';
+    let filename = `小说导出.${fmt}`;
+    const m = cd.match(/filename\*=UTF-8''([^;]+)/i);
+    if (m) filename = decodeURIComponent(m[1]);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+    toast(`已导出 ${filename}`,'success');
   } catch(e) { toast(e.message,'error'); }
 }
 
