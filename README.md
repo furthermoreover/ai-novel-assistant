@@ -88,17 +88,7 @@ python -m venv .venv
 
 ## 📄 静态展示页
 
-本仓库 `docs/` 目录包含项目展示页，可在 GitHub 仓库 Settings → Pages 中部署：
-
-1. Settings → Pages → **Build and deployment**
-2. Source 选 **Deploy from a branch** → Branch 选 `main`、目录选 `/docs`
-3. Save 后等待 1-2 分钟，页面即通过 `https://<your-name>.github.io/ai-novel-assistant/` 访问
-
-## 🔒 安全说明
-
-- `.env`（含 API Key 与数据库密码）已被 `.gitignore` 排除，**永远不会提交**
-- 请勿把 `.env` 或任何含密钥的文件推送到公开仓库
-- 登录 Token 使用本地固定密钥签名，个人本地使用足够；如需部署到公网请自行更换 `backend/auth.py` 中的 `SECRET`
+https://furthermoreover.github.io/ai-novel-assistant/
 
 ## 📝 License
 
