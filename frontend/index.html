@@ -777,11 +777,16 @@ function openModal(id) {
 // ============ 导航 ============
 function navigate(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('.nav-link').forEach(l=>l.classList.toggle('active', l.dataset.page === page));
+  if (page === 'projects' && currentProject) {
+    // 已有正在使用的小说项目：回到工作台而不是项目列表
+    document.getElementById('page-workspace').classList.add('active');
+  } else {
+    document.getElementById('page-' + page).classList.add('active');
+  }
   if (page === 'skills') loadSkillsPage();
   if (page === 'knowledge') loadKnowledgePage();
-  if (page === 'projects') loadProjects();
+  if (page === 'projects' && !currentProject) loadProjects();
 }
 
 document.querySelectorAll('.nav-link').forEach(l=>{
@@ -1374,9 +1379,15 @@ async function loadWriteTargets() {
   try {
     const data = await api(`/projects/${currentProject.id}/chapters`);
     const sel = document.getElementById('write-target');
+    const cur = sel.value;
     sel.innerHTML = data.items.length
       ? data.items.map(c=>`<option value="${c.id}">第${c.chapter_number}章 ${esc(c.title)}</option>`).join('')
       : '<option value="">（暂无章节，请先新建）</option>';
+    // 保留用户当前选中的章节，避免切换页面后被重置回第一章
+    if (cur) {
+      const exists = [...sel.options].some(o => o.value === cur);
+      if (exists) sel.value = cur;
+    }
   } catch(e) { toast(e.message,'error'); }
 }
 
